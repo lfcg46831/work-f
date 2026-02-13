@@ -22,7 +22,6 @@ $jdkInstallDir = "C:\Program Files\Java\jdk-$jdkVersion"
 $jdkLogFile = "$downloadFolder\jdk-install.log"
 $jdkInstallerUrl = "https://download.oracle.com/java/17/archive/jdk-17.0.11_windows-x64_bin.exe"
 
-
 # Define the paths for Epson JavaPOS
 $epsonInstallFolder = "C:\TotalCheckout\PackagePOS\Epson_JavaPOS_ADK_11429"
 $epsonInstallerName = "EPSON_JavaPOS_1.14.29.exe"
@@ -1106,10 +1105,9 @@ function Invoke-PeripheralInstallPlan {
         Write-Output "Executing peripheral step for '$name' using installer '$installer'."
 
         switch ($installer) {
-            "epson" { Install-EpsonJavaPOS; break }
-            "datalogic" { Install-DatalogicJavaPOS; break }
-            "citizen" { Install-CitizenJavaPOS; break }
-            "hp" { Install-HPCashDrawerDriver; break }
+            "epson-printer" { Install-EpsonJavaPOS; break }
+            "datalogic-scanner" { Install-DatalogicJavaPOS; break }
+            "citizen-printer" { Install-CitizenJavaPOS; break }
             "hp-cash-drawer" { Install-HPCashDrawerDriver; break }
             default { Write-Warning "No installer mapped for peripheral '$name' (installer='$installer'). Skipping." }
         }
