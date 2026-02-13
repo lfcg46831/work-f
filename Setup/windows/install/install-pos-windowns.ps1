@@ -1,4 +1,9 @@
-﻿# Define paths and variables
+﻿param(
+    [string]$ProfilePath = "",
+    [switch]$UseInstallPlan
+)
+
+# Define paths and variables
 $downloadPath = "C:\TotalCheckout"
 $downloadFolder = "$downloadPath\install-pos"
 $logFile = "$downloadFolder\install-log.txt"
@@ -111,6 +116,98 @@ $IaaSWorkingDir = "C:\POS_Main"
 $IaaSPort = "10000"
 $IaaSConfigPath = "C:\POS_MAIN\Configuration.dat"
 $NSSM_PATH = "C:\nssm\win64\nssm.exe"   # já tens isto noutros sítios; se preferires, reutiliza
+
+# Perfil POS carregado de um ficheiro JSON (opcional)
+$PosProfile = $null
+
+function Get-ProfileValue {
+    param(
+        [Parameter(Mandatory = $true)]
+        $Node,
+
+        [Parameter(Mandatory = $true)]
+        [string]$PropertyName,
+
+        $DefaultValue = $null
+    )
+
+    if ($null -eq $Node) {
+        return $DefaultValue
+    }
+
+    if ($Node.PSObject.Properties.Name -contains $PropertyName) {
+        return $Node.$PropertyName
+    }
+
+    return $DefaultValue
+}
+
+function ConvertTo-Hashtable {
+    param(
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject]$InputObject
+    )
+
+    $hash = @{}
+    foreach ($property in $InputObject.PSObject.Properties) {
+        $hash[$property.Name] = $property.Value
+    }
+
+    return $hash
+}
+
+function Load-PosProfile {
+    param (
+        [string]$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        Write-Output "No POS profile provided. Running with script defaults."
+        return $null
+    }
+
+    if (-Not (Test-Path -Path $Path)) {
+        throw "POS profile not found at '$Path'."
+    }
+
+    try {
+        $rawProfile = Get-Content -Path $Path -Raw -Encoding UTF8
+        $profile = $rawProfile | ConvertFrom-Json
+        Write-Output "Loaded POS profile: $($profile.model)"
+        return $profile
+    } catch {
+        throw "Failed to load POS profile from '$Path'. Error: $($_.Exception.Message)"
+    }
+}
+
+function Apply-PosProfile {
+    param (
+        $Profile
+    )
+
+    if ($null -eq $Profile) {
+        return
+    }
+
+    $global:sourceFileForJpos = Get-ProfileValue -Node $Profile.paths -PropertyName "jposSource" -DefaultValue $global:sourceFileForJpos
+    $global:destinationFolder = Get-ProfileValue -Node $Profile.paths -PropertyName "jposDestinationFolder" -DefaultValue $global:destinationFolder
+    $global:jposDestinationFile = Join-Path -Path $global:destinationFolder -ChildPath "jpos.xml"
+
+    $global:sourceFolderForNginx = Get-ProfileValue -Node $Profile.paths -PropertyName "nginxSource" -DefaultValue $global:sourceFolderForNginx
+    $global:destinationFolderForNginx = Get-ProfileValue -Node $Profile.paths -PropertyName "nginxDestination" -DefaultValue $global:destinationFolderForNginx
+
+    $global:sourceFolderForNwjs = Get-ProfileValue -Node $Profile.paths -PropertyName "nwjsSource" -DefaultValue $global:sourceFolderForNwjs
+    $global:destinationFolderForNwjs = Get-ProfileValue -Node $Profile.paths -PropertyName "nwjsDestination" -DefaultValue $global:destinationFolderForNwjs
+
+    $global:sourceFolderForNssm = Get-ProfileValue -Node $Profile.paths -PropertyName "nssmSource" -DefaultValue $global:sourceFolderForNssm
+    $global:destinationFolderForNssm = Get-ProfileValue -Node $Profile.paths -PropertyName "nssmDestination" -DefaultValue $global:destinationFolderForNssm
+
+    $global:folderPath = Get-ProfileValue -Node $Profile.paths -PropertyName "databaseFolder" -DefaultValue $global:folderPath
+
+    $global:Environment = Get-ProfileValue -Node $Profile.environment -PropertyName "releaseMode" -DefaultValue $global:Environment
+
+    Write-Output "POS profile overrides applied successfully."
+}
 
 # Create the download folder if it doesn't exist
 if (-Not (Test-Path $downloadFolder)) {
@@ -777,6 +874,10 @@ function Install-SQLServerAndCreateUser {
 
 
 function Add-OlcasEnviroment-Variables{
+    param (
+        [hashtable]$CustomEnvVars
+    )
+
     # Define the environment variables
     $envVars = @{
         "STORE_TYPE" = "04"
@@ -785,6 +886,12 @@ function Add-OlcasEnviroment-Variables{
         "SERVERNAME1" = "\\172.16.244.40"
         "SERVERNAME2" = "\\172.16.244.40"
         "POS_ID" = "30"
+    }
+
+    if ($null -ne $CustomEnvVars) {
+        foreach ($customKey in $CustomEnvVars.Keys) {
+            $envVars[$customKey] = $CustomEnvVars[$customKey]
+        }
     }
     
     # Add the variables to the system environment
@@ -867,6 +974,37 @@ function Execute-InstallOlcasCmd {
 
     # Run the command
     Start-Process "install.cmd" -NoNewWindow -Wait
+}
+
+
+function Invoke-PeripheralInstallPlan {
+    param(
+        $Profile
+    )
+
+    if ($null -eq $Profile) {
+        Write-Output "No profile loaded. Install plan will not run."
+        return
+    }
+
+    $peripherals = Get-ProfileValue -Node $Profile -PropertyName "peripherals" -DefaultValue @()
+    foreach ($peripheral in $peripherals) {
+        if (-Not (Get-ProfileValue -Node $peripheral -PropertyName "enabled" -DefaultValue $true)) {
+            continue
+        }
+
+        $name = Get-ProfileValue -Node $peripheral -PropertyName "name" -DefaultValue "unknown"
+        $installer = (Get-ProfileValue -Node $peripheral -PropertyName "installer" -DefaultValue "").ToLowerInvariant()
+
+        Write-Output "Executing peripheral step for '$name' using installer '$installer'."
+
+        switch ($installer) {
+            "epson" { Install-EpsonJavaPOS; break }
+            "datalogic" { Install-DatalogicJavaPOS; break }
+            "citizen" { Install-CitizenJavaPOS; break }
+            default { Write-Warning "No installer mapped for peripheral '$name' (installer='$installer'). Skipping." }
+        }
+    }
 }
 
 # Define the environment variable
@@ -1005,6 +1143,24 @@ function Install-IaaS-Service {
 # Main Script Execution
 Write-Output "Starting installation process..."
 
+try {
+    $PosProfile = Load-PosProfile -Path $ProfilePath
+    Apply-PosProfile -Profile $PosProfile
+} catch {
+    Write-Error $_
+    exit 1
+}
+
+if ($UseInstallPlan -and $null -ne $PosProfile) {
+    Invoke-PeripheralInstallPlan -Profile $PosProfile
+
+    $profileEnvVarsObject = Get-ProfileValue -Node $PosProfile.environment -PropertyName "variables" -DefaultValue $null
+    if ($null -ne $profileEnvVarsObject) {
+        $profileEnvVars = ConvertTo-Hashtable -InputObject $profileEnvVarsObject
+        Add-OlcasEnviroment-Variables -CustomEnvVars $profileEnvVars
+    }
+}
+
 # Step 1: Install .NET SDK 8.0.401
 #$dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDKInstallerUrl -installerFile $dotnetSDKInstallerFile -testPath $dotnetSDKPath
 #if ($dotnetInstallSuccess) {
@@ -1099,5 +1255,9 @@ Write-Output "Starting installation process..."
 # Step 21 - Instalar .NET Framework 3.5
 #$setupPath = "C:\TotalCheckout\PackagePOS\dotNetFx35setup.exe"
 #Install-DotNetFramework -SetupPath $setupPath
+
+# Exemplo de execução por perfil:
+# powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json
+# powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -UseInstallPlan
 
 #Write-Output "All installations are complete."

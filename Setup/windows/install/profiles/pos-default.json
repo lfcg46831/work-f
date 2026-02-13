@@ -1,0 +1,43 @@
+{
+  "model": "pos-default",
+  "description": "Perfil base para instalação de POS com periféricos selecionáveis.",
+  "paths": {
+    "jposSource": "C:\\TotalCheckout\\PackagePOS\\jpos.xml",
+    "jposDestinationFolder": "C:\\TotalCheckout",
+    "databaseFolder": "C:\\TotalCheckout\\Database",
+    "nginxSource": "C:\\TotalCheckout\\PackagePOS\\nginx",
+    "nginxDestination": "C:\\nginx",
+    "nwjsSource": "C:\\TotalCheckout\\PackagePOS\\nwjs",
+    "nwjsDestination": "C:\\nwjs",
+    "nssmSource": "C:\\TotalCheckout\\PackagePOS\\nssm",
+    "nssmDestination": "C:\\nssm"
+  },
+  "peripherals": [
+    {
+      "name": "printer-epson",
+      "installer": "epson",
+      "enabled": true
+    },
+    {
+      "name": "scanner-datalogic",
+      "installer": "datalogic",
+      "enabled": true
+    },
+    {
+      "name": "printer-citizen",
+      "installer": "citizen",
+      "enabled": false
+    }
+  ],
+  "environment": {
+    "releaseMode": "Dev",
+    "variables": {
+      "STORE_TYPE": "04",
+      "OLC_STORE_ID": "0659",
+      "SVRNAME": "\\\\172.16.244.40",
+      "SERVERNAME1": "\\\\172.16.244.40",
+      "SERVERNAME2": "\\\\172.16.244.40",
+      "POS_ID": "30"
+    }
+  }
+}
