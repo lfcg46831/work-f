@@ -239,6 +239,11 @@ function Get-DevicesLibraryPath {
         foreach ($peripheral in $global:PosProfile.peripherals) {
             $enabled = Get-ProfileValue -Node $peripheral -PropertyName "enabled" -DefaultValue $false
             $installer = Get-ProfileValue -Node $peripheral -PropertyName "installer"
+			
+			Write-Host "Peripheral: $($peripheral.name)"
+			Write-Host "  -> Enabled  : $enabled"
+			Write-Host "  -> Installer: $installer"
+			Write-Host "------------------------------------"
 
             if ($enabled -and -not [string]::IsNullOrWhiteSpace($installer)) {
                 $enabledInstallers += $installer.ToLowerInvariant()
@@ -418,6 +423,7 @@ function Install-EpsonJavaPOS {
 
 # Function to install Datalogic JavaPOS
 function Install-DatalogicJavaPOS {
+
     if (Test-Path -Path $datalogicRegistryKey) {
         $installedDisplayName = (Get-ItemProperty -Path $datalogicRegistryKey -Name DisplayName -ErrorAction SilentlyContinue).DisplayName
         if ($installedDisplayName -eq $datalogicDisplayNameValue) {
@@ -426,23 +432,42 @@ function Install-DatalogicJavaPOS {
         }
     }
 
-    if (-Not (Test-Path -Path $datalogicInstallerPath)) {
-        Write-Error "Datalogic installer not found at $datalogicInstallerPath. Please check the path."
-        exit 1
+    if (-not (Test-Path -Path $datalogicInstallerPath)) {
+        throw "Datalogic installer not found at '$datalogicInstallerPath'. Please check the path."
     }
 
-    if (-Not (Test-Path -Path $javaPath)) {
-        Write-Error "Java is not installed at the specified path: $javaPath. Please check and try again."
-        exit 1
+    if (-not (Test-Path -Path $javaPath)) {
+        throw "Java is not installed at the specified path: '$javaPath'. Please check and try again."
     }
 
     Write-Output "Installing Datalogic JavaPOS from $datalogicInstallerPath..."
-    try {
-        Start-Process -FilePath $javaPath -ArgumentList "-jar", $datalogicInstallerPath, "-silent" -Wait -NoNewWindow
-        Write-Output "Datalogic JavaPOS installation completed successfully."
-    } catch {
-        Write-Error "An error occurred during Datalogic JavaPOS installation: $_"
+
+    $baseArgs = @("-jar", $datalogicInstallerPath)
+
+    # 1) tenta com -silent
+    $argsSilent = $baseArgs + @("-silent")
+    Write-Output ("Command: `"$javaPath`" " + ($argsSilent -join ' '))
+
+    $proc = Start-Process -FilePath $javaPath -ArgumentList $argsSilent -Wait -PassThru -NoNewWindow
+    Write-Output "Datalogic installer exit code (silent): $($proc.ExitCode)"
+
+    if ($proc.ExitCode -eq 0) {
+        Write-Output "Datalogic JavaPOS installation completed successfully (silent)."
+        return
     }
+
+    Write-Warning "Silent install failed (exit code $($proc.ExitCode)). Retrying without -silent..."
+
+    # 2) tenta sem -silent (modo interactivo / default)
+    Write-Output ("Command: `"$javaPath`" " + ($baseArgs -join ' '))
+    $proc2 = Start-Process -FilePath $javaPath -ArgumentList $baseArgs -Wait -PassThru -NoNewWindow
+    Write-Output "Datalogic installer exit code (normal): $($proc2.ExitCode)"
+
+    if ($proc2.ExitCode -ne 0) {
+        throw "Datalogic JavaPOS installation failed. ExitCode silent=$($proc.ExitCode), normal=$($proc2.ExitCode). Check installer output."
+    }
+
+    Write-Output "Datalogic JavaPOS installation completed successfully."
 }
 
 # Function to install Citizen JavaPOS
@@ -1094,10 +1119,15 @@ function Invoke-PeripheralInstallPlan {
         Write-Output "No profile loaded. Install plan will not run."
         return
     }
+	
+	Write-Host "Invoke-PeripheralInstallPlan CALLED"
+	Write-Host "Peripherals count: $(@($Profile.peripherals).Count)"
+	Write-Host ("Peripherals: " + ($Profile.peripherals | ConvertTo-Json -Depth 5))
 
-    $peripherals = Get-ProfileValue -Node $Profile -PropertyName "peripherals" -DefaultValue @()
+    $peripherals = @($Profile.peripherals)
     foreach ($peripheral in $peripherals) {
         if (-Not (Get-ProfileValue -Node $peripheral -PropertyName "enabled" -DefaultValue $true)) {
+			Write-Output "Skipping peripheral '$name' because it is disabled in profile."
             continue
         }
 
