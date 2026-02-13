@@ -331,9 +331,6 @@ function Install-JDK {
         [string]$logFile
     )
 
-    # Uninstall any existing JDK versions before proceeding
-    Uninstall-ExistingJDK
-
     # Check if JDK is already installed at the target directory
     if (Test-Path $javaPath) {
         Write-Host "JDK is already installed at $installDir."
