@@ -267,6 +267,32 @@ function Get-DevicesLibraryPath {
     return ($libraryPaths -join ";")
 }
 
+function Test-IsPeripheralEnabled {
+    param(
+        [string]$InstallerName
+    )
+
+    if ([string]::IsNullOrWhiteSpace($InstallerName)) {
+        return $false
+    }
+
+    if ($null -eq $global:PosProfile -or -not ($global:PosProfile.PSObject.Properties.Name -contains "peripherals")) {
+        return $false
+    }
+
+    $normalizedInstallerName = $InstallerName.Trim().ToLowerInvariant()
+    foreach ($peripheral in @($global:PosProfile.peripherals)) {
+        $peripheralInstaller = (Get-ProfileValue -Node $peripheral -PropertyName "installer" -DefaultValue "").ToLowerInvariant()
+        $isEnabled = Get-ProfileValue -Node $peripheral -PropertyName "enabled" -DefaultValue $false
+
+        if ($peripheralInstaller -eq $normalizedInstallerName -and $isEnabled) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
 # Create the download folder if it doesn't exist
 if (-Not (Test-Path $downloadFolder)) {
     New-Item -Path $downloadFolder -ItemType Directory | Out-Null
@@ -399,26 +425,38 @@ function Invoke-JdkInstallStep {
 
 # Function to install Epson JavaPOS
 function Install-EpsonJavaPOS {
+    $isEpsonEnabled = Test-IsPeripheralEnabled -InstallerName "epson-printer"
+    if (-not $isEpsonEnabled) {
+        Write-Output "Epson peripheral is disabled in profile. Skipping Epson installation and DLL copy."
+        return
+    }
+
+    $isInstalled = $false
     if (Test-Path -Path $epsonRegistryKey) {
         $installedDisplayName = (Get-ItemProperty -Path $epsonRegistryKey -Name DisplayName -ErrorAction SilentlyContinue).DisplayName
         if ($installedDisplayName -eq $epsonDisplayNameValue) {
             Write-Output "Epson JavaPOS is already installed. Skipping installation."
-            return
+            $isInstalled = $true
         }
     }
 
-    if (-Not (Test-Path -Path $epsonInstallerPath)) {
-        Write-Error "Epson installer not found at $epsonInstallerPath. Please check the path."
-        exit 1
+    if (-not $isInstalled) {
+        if (-Not (Test-Path -Path $epsonInstallerPath)) {
+            Write-Error "Epson installer not found at $epsonInstallerPath. Please check the path."
+            exit 1
+        }
+
+        Write-Output "Installing Epson JavaPOS from $epsonInstallerPath..."
+        try {
+            Start-Process -FilePath $epsonInstallerPath -ArgumentList "/S" -Wait -NoNewWindow
+            Write-Output "Epson JavaPOS installation completed successfully."
+        } catch {
+            Write-Error "An error occurred during Epson JavaPOS installation: $_"
+            exit 1
+        }
     }
 
-    Write-Output "Installing Epson JavaPOS from $epsonInstallerPath..."
-    try {
-        Start-Process -FilePath $epsonInstallerPath -ArgumentList "/S" -Wait -NoNewWindow
-        Write-Output "Epson JavaPOS installation completed successfully."
-    } catch {
-        Write-Error "An error occurred during Epson JavaPOS installation: $_"
-    }
+    Copy-DLLFiles
 }
 
 # Function to install Datalogic JavaPOS
@@ -1434,8 +1472,8 @@ $stepDefinitions = [ordered]@{
         Action = { Invoke-PeripheralInstallStep -Profile $PosProfile }
     }
     "4" = @{ 
-		Description = "Copiar DLLs Epson para o Java bin"; 
-		Action = { Copy-DLLFiles }
+		Description = "Copiar DLLs Epson para o Java bin (executado no passo de periféricos)"; 
+		Action = { Write-Output "Passo informativo: a cópia das DLLs Epson é executada apenas durante a instalação do periférico Epson enabled no passo 3." }
 	}
     "5" = @{ 
 		Description = "Adicionar JavaPOS Path"; 
