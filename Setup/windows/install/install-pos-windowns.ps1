@@ -41,6 +41,11 @@ $citizenInstallFolder = "C:\TotalCheckout\PackagePOS\Citizen\JavaPOS_V1.14.0.5E"
 $citizenInstallerName = "CSJ_JPOS11405_setup64EN.exe"
 $citizenInstallerPath = Join-Path -Path $citizenInstallFolder -ChildPath $citizenInstallerName
 
+# Define the paths for HP Cash Drawer Driver
+$hpCashDrawerInstallFolder = "C:\TotalCheckout\PackagePOS\HP"
+$hpCashDrawerInstallerName = "sp142606.exe"
+$hpCashDrawerInstallerPath = Join-Path -Path $hpCashDrawerInstallFolder -ChildPath $hpCashDrawerInstallerName
+
 # Path to Java executable
 $javaPath = "C:\Program Files\Java\jdk-17.0.11\bin\java.exe"
 
@@ -207,6 +212,56 @@ function Apply-PosProfile {
     $global:Environment = Get-ProfileValue -Node $Profile.environment -PropertyName "releaseMode" -DefaultValue $global:Environment
 
     Write-Output "POS profile overrides applied successfully."
+}
+
+function Get-DevicesLibraryPath {
+    $basePaths = @(
+        "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib",
+        "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib\x64"
+    )
+
+    $peripheralPathMap = @{
+        "datalogic" = @(
+            "C:\Program Files\Datalogic\JavaPOS",
+            "C:\Program Files\Datalogic\JavaPOS\SupportJars"
+        )
+        "epson" = @(
+            "C:\Program Files\EPSON\JavaPOS\lib",
+            "C:\Program Files\EPSON\JavaPOS\bin",
+            "C:\Program Files\EPSON\JavaPOS\SetupPOS"
+        )
+    }
+
+    $enabledInstallers = @()
+    if ($null -ne $global:PosProfile -and $global:PosProfile.PSObject.Properties.Name -contains "peripherals") {
+        foreach ($peripheral in $global:PosProfile.peripherals) {
+            $enabled = Get-ProfileValue -Node $peripheral -PropertyName "enabled" -DefaultValue $false
+            $installer = Get-ProfileValue -Node $peripheral -PropertyName "installer"
+
+            if ($enabled -and -not [string]::IsNullOrWhiteSpace($installer)) {
+                $enabledInstallers += $installer.ToLowerInvariant()
+            }
+        }
+    }
+
+    if ($enabledInstallers.Count -eq 0) {
+        $enabledInstallers = @("datalogic", "epson")
+    }
+
+    $libraryPaths = New-Object System.Collections.Generic.List[string]
+    $basePaths | ForEach-Object { [void]$libraryPaths.Add($_) }
+
+    foreach ($installer in $enabledInstallers) {
+        if ($peripheralPathMap.ContainsKey($installer)) {
+            foreach ($path in $peripheralPathMap[$installer]) {
+                if (-not $libraryPaths.Contains($path)) {
+                    [void]$libraryPaths.Add($path)
+                }
+            }
+        }
+    }
+
+    return ($libraryPaths -join ";")
 }
 
 # Create the download folder if it doesn't exist
@@ -378,6 +433,28 @@ function Install-CitizenJavaPOS {
         Write-Output "Citizen JavaPOS installation completed successfully."
     } catch {
         Write-Error "An error occurred during Citizen JavaPOS installation: $_"
+    }
+}
+
+# Function to install HP Cash Drawer Driver
+function Install-HPCashDrawerDriver {
+    if (-Not (Test-Path -Path $hpCashDrawerInstallerPath)) {
+        Write-Error "HP Cash Drawer installer not found at $hpCashDrawerInstallerPath. Please check the path."
+        exit 1
+    }
+
+    Write-Output "Installing HP Cash Drawer driver from $hpCashDrawerInstallerPath..."
+    try {
+        $process = Start-Process -FilePath $hpCashDrawerInstallerPath -ArgumentList "/s" -Wait -PassThru -NoNewWindow
+        if ($process.ExitCode -ne 0) {
+            Write-Error "HP Cash Drawer driver installer exited with code $($process.ExitCode)."
+            exit 1
+        }
+
+        Write-Output "HP Cash Drawer driver installation completed successfully."
+    } catch {
+        Write-Error "An error occurred during HP Cash Drawer driver installation: $_"
+        exit 1
     }
 }
 
@@ -734,7 +811,8 @@ $WORKING_DIR = "C:\Releases\TotalCheckoutPOS.Devices"
 $JAR_FILE = Join-Path $WORKING_DIR "Devices-all.jar"
 $CONFIG_FILE = Join-Path $WORKING_DIR "application.properties"
 $LOG4J_CONFIG = Join-Path $WORKING_DIR "log4j2.xml"
-$LIB_PATH = "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib;C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib\x64;C:\Program Files\Datalogic\JavaPOS;C:\Program Files\Datalogic\JavaPOS\SupportJars;C:\Program Files\EPSON\JavaPOS\lib;C:\Program Files\EPSON\JavaPOS\bin;C:\Program Files\EPSON\JavaPOS\SetupPOS"
+$LIB_PATH = Get-DevicesLibraryPath
+Write-Output "Using java.library.path: $LIB_PATH"
 
 # Check if the service is already installed
 Write-Output "Checking if service '$SERVICE_NAME' is already installed..."
@@ -1001,6 +1079,8 @@ function Invoke-PeripheralInstallPlan {
             "epson" { Install-EpsonJavaPOS; break }
             "datalogic" { Install-DatalogicJavaPOS; break }
             "citizen" { Install-CitizenJavaPOS; break }
+            "hp" { Install-HPCashDrawerDriver; break }
+            "hp-cash-drawer" { Install-HPCashDrawerDriver; break }
             default { Write-Warning "No installer mapped for peripheral '$name' (installer='$installer'). Skipping." }
         }
     }
