@@ -4,6 +4,8 @@
     [string[]]$Steps = @("full")
 )
 
+$ErrorActionPreference = "Stop"
+
 # Define paths and variables
 $downloadPath = "C:\TotalCheckout"
 $downloadFolder = "$downloadPath\install-pos"
@@ -1358,7 +1360,14 @@ function Invoke-InstallStep {
     )
 
     Write-Output "Running step $StepId - $Description"
-    & $Action
+
+    try {
+        & $Action
+        Write-Output "Step $StepId completed successfully."
+    }
+    catch {
+        throw "Step $StepId failed ($Description): $($_.Exception.Message)"
+    }
 }
 
 
