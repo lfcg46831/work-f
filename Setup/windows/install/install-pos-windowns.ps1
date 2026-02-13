@@ -491,6 +491,7 @@ function Install-DatalogicJavaPOS {
 
     if ($proc.ExitCode -eq 0) {
         Write-Output "Datalogic JavaPOS installation completed successfully (silent)."
+        Add-JavaPOSPath
         return
     }
 
@@ -506,6 +507,7 @@ function Install-DatalogicJavaPOS {
     }
 
     Write-Output "Datalogic JavaPOS installation completed successfully."
+    Add-JavaPOSPath
 }
 
 # Function to install Citizen JavaPOS
@@ -585,6 +587,11 @@ function Copy-DLLFiles {
 
 # Function to add new path variable
 function Add-JavaPOSPath {
+    if (-not (Test-IsPeripheralEnabled -InstallerName "datalogic-scanner")) {
+        Write-Output "Datalogic peripheral is not enabled in POS profile. Skipping JavaPOS PATH update."
+        return
+    }
+
     # Check if the new path is already in the system PATH
     if ($currentPath -notlike "*$javaPOSNewPath*") {
         # Append the new path to the system PATH
@@ -1476,8 +1483,8 @@ $stepDefinitions = [ordered]@{
 		Action = { Write-Output "Passo informativo: a cópia das DLLs Epson é executada apenas durante a instalação do periférico Epson enabled no passo 3." }
 	}
     "5" = @{ 
-		Description = "Adicionar JavaPOS Path"; 
-		Action = { Add-JavaPOSPath }
+		Description = "Passo informativo: JavaPOS Path do Datalogic é atualizado durante a instalação do periférico Datalogic no passo 3."; 
+		Action = { Write-Output "Passo informativo: o JavaPOS Path do Datalogic é atualizado apenas quando o periférico Datalogic enabled é instalado no passo 3." }
 	}
     "6" = @{ 
 		Description = "Copiar ficheiros Utils"; 
