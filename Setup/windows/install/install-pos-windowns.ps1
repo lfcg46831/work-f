@@ -190,10 +190,9 @@ function Apply-PosProfile {
     param (
         $Profile
     )
-
-    if ($null -eq $Profile) {
-        return
-    }
+	if ($null -eq $Profile) { throw "POS profile is null. Ensure -ProfilePath is provided and the JSON file exists and is valid." }
+	if ($null -eq $Profile.paths) { throw "Profile is missing 'paths' node." }
+	if ($null -eq $Profile.environment) { throw "Profile is missing 'environment' node." }
 
     $global:sourceFileForJpos = Get-ProfileValue -Node $Profile.paths -PropertyName "jposSource" -DefaultValue $global:sourceFileForJpos
     $global:destinationFolder = Get-ProfileValue -Node $Profile.paths -PropertyName "jposDestinationFolder" -DefaultValue $global:destinationFolder
@@ -219,18 +218,14 @@ function Get-DevicesLibraryPath {
     $basePaths = @()
 
     $peripheralPathMap = @{
-        "datalogic" = @(
+        "datalogic-scanner" = @(
             "C:\Program Files\Datalogic\JavaPOS",
             "C:\Program Files\Datalogic\JavaPOS\SupportJars"
         )
-        "epson" = @(
+        "epson-printer" = @(
             "C:\Program Files\EPSON\JavaPOS\lib",
             "C:\Program Files\EPSON\JavaPOS\bin",
             "C:\Program Files\EPSON\JavaPOS\SetupPOS"
-        )
-        "hp" = @(
-            "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib",
-            "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib\x64"
         )
         "hp-cash-drawer" = @(
             "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib",
@@ -248,10 +243,6 @@ function Get-DevicesLibraryPath {
                 $enabledInstallers += $installer.ToLowerInvariant()
             }
         }
-    }
-
-    if ($enabledInstallers.Count -eq 0) {
-        $enabledInstallers = @("datalogic", "epson")
     }
 
     $libraryPaths = New-Object System.Collections.Generic.List[string]
@@ -539,8 +530,8 @@ function Add-JavaPOSPath {
     $env:Path = [System.Environment]::GetEnvironmentVariable('Path', [System.EnvironmentVariableTarget]::Machine)
 
     # Verify the Path is updated
-    if ($env:Path -like "*$newPath*") {
-        Write-Output "The path is now correctly added: $newPath"
+    if ($env:Path -like "*$javaPOSNewPath*") {
+        Write-Output "The path is now correctly added: $javaPOSNewPath"
     } else {
         Write-Output "The path was not added."
     }
@@ -1390,54 +1381,74 @@ if ($UseInstallPlan -and $null -ne $PosProfile) {
 $stepDefinitions = [ordered]@{
     "1" = @{
         Description = "Install .NET SDK 8.0.401"
-        Action      = {
-            Invoke-DotnetSdkInstallStep
-        }
+        Action = { Invoke-DotnetSdkInstallStep }
     }
     "2" = @{
         Description = "Instalar o jdk-17.0.11_windows-x64_bin"
-        Action      = {
-            Invoke-JdkInstallStep
-        }
+        Action = { Invoke-JdkInstallStep }
     }
-    "2.1" = @{
+    "3" = @{
         Description = "Instalar periféricos do perfil POS"
-        Action      = {
-            Invoke-PeripheralInstallStep -Profile $PosProfile
-        }
+        Action = { Invoke-PeripheralInstallStep -Profile $PosProfile }
     }
-    "3" = @{ Description = "Copiar DLLs Epson para o Java bin"; Action = { Copy-DLLFiles } }
-    "4" = @{ Description = "Adicionar JavaPOS Path"; Action = { Add-JavaPOSPath } }
-    "5" = @{ Description = "Copiar ficheiros Utils"; Action = { Copy-UtilsFiles } }
-    "6" = @{ Description = "Criar pasta C:\TotalCheckout\Database"; Action = { Create-TotalCheckoutDatabaseFolder } }
-    "7" = @{ Description = "Copiar jpos.xml"; Action = { Copy-JPOSXmlFile } }
-    "8" = @{ Description = "Copiar pasta nginx"; Action = { Copy-NginxFolder } }
-    "9" = @{ Description = "Copiar pasta nwjs"; Action = { Copy-NwjsFolder } }
-    "10" = @{ Description = "Copiar pasta nssm"; Action = { Copy-NssmFolder } }
-    "11" = @{ Description = "Download e instalação de FFmpeg"; Action = { Download-And-Setup-FFmpeg } }
-    "12" = @{ Description = "Copiar soluções para releases"; Action = { Copy-Services-Folders } }
-    "13" = @{ Description = "Criar serviços Windows para APIs"; Action = { Create-Services } }
-    "14" = @{ Description = "Instalar Devices API como Windows Service"; Action = { Istall-Devices-Service } }
-    "15" = @{ Description = "Iniciar serviços Windows do TotalCheckoutPOS"; Action = { Start-TotalCheckoutPOSServices } }
-    "16" = @{ Description = "Instalar IaaS.exe como Windows Service"; Action = { Install-IaaS-Service } }
-    "17" = @{ Description = "Instalar SQL Server Express para Olcas"; Action = { Install-SQLServerAndCreateUser } }
-    "18" = @{
-        Description = "Configurar e instalar Olcas"
-        Action      = {
-            Invoke-OlcasInstallStep
-        }
-    }
+    "4" = @{ 
+		Description = "Copiar DLLs Epson para o Java bin"; 
+		Action = { Copy-DLLFiles }
+	}
+    "5" = @{ 
+		Description = "Adicionar JavaPOS Path"; 
+		Action = { Add-JavaPOSPath }
+	}
+    "6" = @{ 
+		Description = "Copiar ficheiros Utils"; 
+		Action = { Copy-UtilsFiles } }
+    "7" = @{ 
+		Description = "Criar pasta C:\TotalCheckout\Database"; 
+		Action = { Create-TotalCheckoutDatabaseFolder } }
+    "8" = @{ 
+		Description = "Copiar jpos.xml"; 
+		Action = { Copy-JPOSXmlFile } }
+    "9" = @{ 
+		Description = "Copiar pasta nginx"; 
+		Action = { Copy-NginxFolder } }
+    "10" = @{ 
+		Description = "Copiar pasta nwjs"; 
+		Action = { Copy-NwjsFolder } }
+    "11" = @{ 
+		Description = "Copiar pasta nssm"; 
+		Action = { Copy-NssmFolder } }
+    "12" = @{ 
+		Description = "Download e instalação de FFmpeg"; 
+		Action = { Download-And-Setup-FFmpeg } }
+    "13" = @{ 
+		Description = "Copiar soluções para releases"; 
+		Action = { Copy-Services-Folders } }
+    "14" = @{ 
+		Description = "Criar serviços Windows para APIs"; 
+		Action = { Create-Services } }
+    "15" = @{ 
+		Description = "Instalar Devices API como Windows Service"; 
+		Action = { Istall-Devices-Service } }
+    "16" = @{ 
+		Description = "Iniciar serviços Windows do TotalCheckoutPOS"; 
+		Action = { Start-TotalCheckoutPOSServices } }
+    "17" = @{ 
+		Description = "Instalar IaaS.exe como Windows Service"; 
+		Action = { Install-IaaS-Service } }
+    "18" = @{ 
+		Description = "Instalar SQL Server Express para Olcas"; 
+		Action = { Install-SQLServerAndCreateUser } }
     "19" = @{
-        Description = "Copiar ServicesWindows para C:\"
-        Action      = {
-            Invoke-ServicesWindowsCopyStep
-        }
+        Description = "Configurar e instalar Olcas"
+        Action = { Invoke-OlcasInstallStep }
     }
     "20" = @{
+        Description = "Copiar ServicesWindows para C:\"
+        Action = { Invoke-ServicesWindowsCopyStep }
+    }
+    "21" = @{
         Description = "Instalar .NET Framework 3.5"
-        Action      = {
-            Invoke-DotNetFrameworkInstallStep
-        }
+        Action = { Invoke-DotNetFrameworkInstallStep }
     }
 }
 
@@ -1451,10 +1462,10 @@ foreach ($stepId in $selectedSteps) {
     Invoke-InstallStep -StepId $stepId -Description $stepDefinition.Description -Action $stepDefinition.Action
 }
 
+Write-Output "All installations are complete."
+
 # Exemplo de execução por perfil:
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -UseInstallPlan
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -Steps 1,2,5
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -Steps full
-
-Write-Output "All installations are complete."

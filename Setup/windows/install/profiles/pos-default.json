@@ -15,17 +15,17 @@
   "peripherals": [
     {
       "name": "printer-epson",
-      "installer": "epson",
+      "installer": "epson-printer",
       "enabled": true
     },
     {
       "name": "scanner-datalogic",
-      "installer": "datalogic",
+      "installer": "datalogic-scanner",
       "enabled": true
     },
     {
       "name": "printer-citizen",
-      "installer": "citizen",
+      "installer": "citizen-printer",
       "enabled": false
     },
     {
