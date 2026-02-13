@@ -1,6 +1,7 @@
 ﻿param(
     [string]$ProfilePath = "",
-    [switch]$UseInstallPlan
+    [switch]$UseInstallPlan,
+    [string[]]$Steps = @("full")
 )
 
 # Define paths and variables
@@ -1224,6 +1225,92 @@ function Install-IaaS-Service {
 }
 
 
+function Resolve-SelectedInstallSteps {
+    param (
+        [string[]]$RequestedSteps,
+        [string[]]$AvailableSteps
+    )
+
+    $normalizedSteps = @()
+
+    foreach ($requestedStep in $RequestedSteps) {
+        if ([string]::IsNullOrWhiteSpace($requestedStep)) {
+            continue
+        }
+
+        $splitSteps = $requestedStep -split ","
+        foreach ($stepValue in $splitSteps) {
+            $normalizedValue = $stepValue.Trim().ToLowerInvariant()
+            if (-not [string]::IsNullOrWhiteSpace($normalizedValue)) {
+                $normalizedSteps += $normalizedValue
+            }
+        }
+    }
+
+    if ($normalizedSteps.Count -eq 0) {
+        throw "No installation steps were provided. Use -Steps full or define the step numbers to execute."
+    }
+
+    if ($normalizedSteps -contains "full") {
+        return $AvailableSteps
+    }
+
+    $stepAliases = @{
+        "18" = @("18.1", "18.2", "18.3")
+    }
+
+    $invalidSteps = New-Object System.Collections.Generic.List[string]
+    $selectedSteps = New-Object System.Collections.Generic.HashSet[string]
+
+    foreach ($normalizedStep in $normalizedSteps) {
+        if ($stepAliases.ContainsKey($normalizedStep)) {
+            foreach ($aliasStep in $stepAliases[$normalizedStep]) {
+                [void]$selectedSteps.Add($aliasStep)
+            }
+            continue
+        }
+
+        if ($AvailableSteps -contains $normalizedStep) {
+            [void]$selectedSteps.Add($normalizedStep)
+        }
+        else {
+            $invalidSteps.Add($normalizedStep)
+        }
+    }
+
+    if ($invalidSteps.Count -gt 0) {
+        $availableStepText = [string]::Join(", ", $AvailableSteps)
+        $invalidStepText = [string]::Join(", ", $invalidSteps)
+        throw "Invalid step(s): $invalidStepText. Available values: full, $availableStepText"
+    }
+
+    $orderedSelectedSteps = @()
+    foreach ($availableStep in $AvailableSteps) {
+        if ($selectedSteps.Contains($availableStep)) {
+            $orderedSelectedSteps += $availableStep
+        }
+    }
+
+    return $orderedSelectedSteps
+}
+
+function Invoke-InstallStep {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$StepId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Description,
+
+        [Parameter(Mandatory = $true)]
+        [ScriptBlock]$Action
+    )
+
+    Write-Output "Running step $StepId - $Description"
+    & $Action
+}
+
+
 # Main Script Execution
 Write-Output "Starting installation process..."
 
@@ -1245,94 +1332,89 @@ if ($UseInstallPlan -and $null -ne $PosProfile) {
     }
 }
 
-# Step 1: Install .NET SDK 8.0.401
-$dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDKInstallerUrl -installerFile $dotnetSDKInstallerFile -testPath $dotnetSDKPath
-if ($dotnetInstallSuccess) {
-    Write-Host ".NET SDK installation completed successfully!"
-} else {
-   Write-Host ".NET SDK installation failed. Please check the log file for more details."
-    exit 1
+$stepDefinitions = [ordered]@{
+    "1" = @{
+        Description = "Install .NET SDK 8.0.401"
+        Action      = {
+            $dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDKInstallerUrl -installerFile $dotnetSDKInstallerFile -testPath $dotnetSDKPath
+            if ($dotnetInstallSuccess) {
+                Write-Host ".NET SDK installation completed successfully!"
+            }
+            else {
+                Write-Host ".NET SDK installation failed. Please check the log file for more details."
+                exit 1
+            }
+        }
+    }
+    "2" = @{
+        Description = "Instalar o jdk-17.0.11_windows-x64_bin"
+        Action      = {
+            $jdkInstallSuccess = Install-JDK -installerFile $jdkInstallerFile -installDir $jdkInstallDir -logFile $jdkLogFile
+            if ($jdkInstallSuccess) {
+                Write-Host "JDK installation completed successfully!"
+            }
+            else {
+                Write-Host "JDK installation failed. Please check the log file for more details."
+                exit 1
+            }
+        }
+    }
+    "3" = @{ Description = "Copiar DLLs Epson para o Java bin"; Action = { Copy-DLLFiles } }
+    "4" = @{ Description = "Adicionar JavaPOS Path"; Action = { Add-JavaPOSPath } }
+    "5" = @{ Description = "Copiar ficheiros Utils"; Action = { Copy-UtilsFiles } }
+    "6" = @{ Description = "Criar pasta C:\TotalCheckout\Database"; Action = { Create-TotalCheckoutDatabaseFolder } }
+    "7" = @{ Description = "Copiar jpos.xml"; Action = { Copy-JPOSXmlFile } }
+    "8" = @{ Description = "Copiar pasta nginx"; Action = { Copy-NginxFolder } }
+    "9" = @{ Description = "Copiar pasta nwjs"; Action = { Copy-NwjsFolder } }
+    "10" = @{ Description = "Copiar pasta nssm"; Action = { Copy-NssmFolder } }
+    "11" = @{ Description = "Download e instalação de FFmpeg"; Action = { Download-And-Setup-FFmpeg } }
+    "12" = @{ Description = "Copiar soluções para releases"; Action = { Copy-Services-Folders } }
+    "13" = @{ Description = "Criar serviços Windows para APIs"; Action = { Create-Services } }
+    "14" = @{ Description = "Instalar Devices API como Windows Service"; Action = { Istall-Devices-Service } }
+    "15" = @{ Description = "Iniciar serviços Windows do TotalCheckoutPOS"; Action = { Start-TotalCheckoutPOSServices } }
+    "16" = @{ Description = "Instalar IaaS.exe como Windows Service"; Action = { Install-IaaS-Service } }
+    "17" = @{ Description = "Instalar SQL Server Express para Olcas"; Action = { Install-SQLServerAndCreateUser } }
+    "18.1" = @{ Description = "Definir variáveis de ambiente Olcas"; Action = { Add-OlcasEnviroment-Variables } }
+    "18.2" = @{ Description = "Copiar conteúdo da pasta Olcas"; Action = { Copy-OlcasFolderContents -SourcePath "C:\TotalCheckout\PackagePOS\Olcas" -DestinationPath "C:\" } }
+    "18.3" = @{ Description = "Instalar Olcas Client"; Action = { Execute-InstallOlcasCmd } }
+    "19" = @{
+        Description = "Copiar ServicesWindows para C:\"
+        Action      = {
+            if ($Environment -eq "Dev") {
+                Write-Output "Environment is set to Dev. Running the copy function..."
+                Copy-FolderContents -SourceFolder "C:\TotalCheckout\PackagePOS\ServicesWindows" -DestinationFolder "C:\ServicesWindows"
+            }
+            elseif ($Environment -eq "Release") {
+                Write-Output "Environment is set to Release. Function will not run."
+            }
+            else {
+                Write-Output "Unknown environment value: '$Environment'. Function will not run."
+            }
+        }
+    }
+    "20" = @{
+        Description = "Instalar .NET Framework 3.5"
+        Action      = {
+            $setupPath = "C:\TotalCheckout\PackagePOS\dotNetFx35setup.exe"
+            Install-DotNetFramework -SetupPath $setupPath
+        }
+    }
 }
 
-# Step 2: Instalar o jdk-17.0.11_windows-x64_bin
-$jdkInstallSuccess = Install-JDK -installerFile $jdkInstallerFile -installDir $jdkInstallDir -logFile $jdkLogFile
-if ($jdkInstallSuccess) {
-    Write-Host "JDK installation completed successfully!"
-} else {
-    Write-Host "JDK installation failed. Please check the log file for more details."
-    exit 1
+$availableSteps = @($stepDefinitions.Keys)
+$selectedSteps = Resolve-SelectedInstallSteps -RequestedSteps $Steps -AvailableSteps $availableSteps
+
+Write-Output "Selected installation steps: $([string]::Join(', ', $selectedSteps))"
+
+foreach ($stepId in $selectedSteps) {
+    $stepDefinition = $stepDefinitions[$stepId]
+    Invoke-InstallStep -StepId $stepId -Description $stepDefinition.Description -Action $stepDefinition.Action
 }
-
-# Step 3 - copiar BluetoothIO.DLL, epsonjpos.dll, EthernetIO31.DLL, SerialIO31.dll, USBIO31.DLL de C:\Program Files\EPSON\JavaPOS\bin\ para C:\Program Files\Java\jdk-17\bin
-Copy-DLLFiles
-
-# Step 4 -  Adicionar nas variaveis de sistema (Path) C:\Program Files\Datalogic\JavaPOS\SupportJars
-Add-JavaPOSPath
-
-# Step 5 - É necessario copiar os ficheiros caso não existam brand.properties, dls.properties, ECIEncondig.csv, IHSParser.csv, LabelIdentifiers.csv e log4j2.xml para a pasta de deploy juntando ao ficheiro Devices-all.jar
-Copy-UtilsFiles
-
-# Step 6 - Criar pasta C:\TotalCheckout\Database
-Create-TotalCheckoutDatabaseFolder
-
-# Step 7 - Colocar ficheiro jpos na raiz da pasta C:\TotalCheckout
-Copy-JPOSXmlFile
-
-# Step 8 - Copiar a pasta nginx para  o C:\
-Copy-NginxFolder
-
-# Step 9 - Copiar a pasta nwjs para o C:\
-Copy-NwjsFolder
-
-# Step 10 Copiar a pasta nssm para o C:\
-Copy-NssmFolder
-
-# Step 11 - Donwload e instalação de FFmepg
-Download-And-Setup-FFmpeg
-
-# Step 12 - Copiar as soluções das APIs e UI para a pasta de release
-Copy-Services-Folders
-
-# Step 13 - Criar os serviços windows para as APIS
-Create-Services
-
-# Step 14 - Instalar a API de Devices como windows service usando o NSSM
-Istall-Devices-Service
-
-# Step 15 - Start de todos os serviços windows para TotalCheckoutPOS
-Start-TotalCheckoutPOSServices
-
-# Step 16 - Instalar IaaS.exe como Windows Service via NSSM
-Install-IaaS-Service
-
-# Step 17 - Instalar SQLServer Express para Olcas
-Install-SQLServerAndCreateUser
-
-# Step 18.1 - Set Olcas Enviroment Variables
-Add-OlcasEnviroment-Variables
-
-# Step 18.2 - Copy Olcas Folder Content
-Copy-OlcasFolderContents -SourcePath "C:\TotalCheckout\PackagePOS\Olcas" -DestinationPath "C:\"
-
-# Step 18.3 - Install Olcas Client
-Execute-InstallOlcasCmd
-
-# Step 19 - Copiar a pasta ServicesWindows para o C:\
-if ($Environment -eq "Dev") {
-    Write-Output "Environment is set to Dev. Running the copy function..."
-    Copy-FolderContents -SourceFolder "C:\TotalCheckout\PackagePOS\ServicesWindows" -DestinationFolder "C:\ServicesWindows"
-} elseif ($Environment -eq "Release") {
-    Write-Output "Environment is set to Release. Function will not run."
-} else {
-   Write-Output "Unknown environment value: '$Environment'. Function will not run."
-}
-
-# Step 20 - Instalar .NET Framework 3.5
-$setupPath = "C:\TotalCheckout\PackagePOS\dotNetFx35setup.exe"
-Install-DotNetFramework -SetupPath $setupPath
 
 # Exemplo de execução por perfil:
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -UseInstallPlan
+# powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -Steps 1,2,5
+# powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -Steps full
 
 Write-Output "All installations are complete."
