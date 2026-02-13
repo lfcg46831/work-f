@@ -215,10 +215,7 @@ function Apply-PosProfile {
 }
 
 function Get-DevicesLibraryPath {
-    $basePaths = @(
-        "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib",
-        "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib\x64"
-    )
+    $basePaths = @()
 
     $peripheralPathMap = @{
         "datalogic" = @(
@@ -229,6 +226,14 @@ function Get-DevicesLibraryPath {
             "C:\Program Files\EPSON\JavaPOS\lib",
             "C:\Program Files\EPSON\JavaPOS\bin",
             "C:\Program Files\EPSON\JavaPOS\SetupPOS"
+        )
+        "hp" = @(
+            "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib",
+            "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib\x64"
+        )
+        "hp-cash-drawer" = @(
+            "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib",
+            "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib\x64"
         )
     }
 
