@@ -115,7 +115,7 @@ $IaaSExePath = "C:\POS_Main\IaaS.exe"
 $IaaSWorkingDir = "C:\POS_Main"
 $IaaSPort = "10000"
 $IaaSConfigPath = "C:\POS_MAIN\Configuration.dat"
-$NSSM_PATH = "C:\nssm\win64\nssm.exe"   # já tens isto noutros sítios; se preferires, reutiliza
+$NSSM_PATH = "C:\nssm\win64\nssm.exe"
 
 # Perfil POS carregado de um ficheiro JSON (opcional)
 $PosProfile = $null
@@ -708,18 +708,17 @@ function Create-Services{
     # Check if the service exists NginxName
     # Variables
 $nginxPath = "C:\nginx\nginx.exe"
-$nssmPath = "C:\nssm\win64\nssm.exe"
 $serviceName = "nginx"
 $serviceDisplayName = "Nginx Web Server"
 $serviceDescription = "Nginx Web Server running as a Windows Service via NSSM"
 
 # Install Nginx as a service
-& $nssmPath install $serviceName $nginxPath
+& $NSSM_PATH install $serviceName $nginxPath
 
 # Configure optional parameters (optional)
-& $nssmPath set $serviceName DisplayName $serviceDisplayName
-& $nssmPath set $serviceName Description $serviceDescription
-& $nssmPath set $serviceName Start SERVICE_AUTO_START
+& $NSSM_PATH set $serviceName DisplayName $serviceDisplayName
+& $NSSM_PATH set $serviceName Description $serviceDescription
+& $NSSM_PATH set $serviceName Start SERVICE_AUTO_START
 
 # Start the service
 Start-Service -Name $serviceName
@@ -1162,102 +1161,93 @@ if ($UseInstallPlan -and $null -ne $PosProfile) {
 }
 
 # Step 1: Install .NET SDK 8.0.401
-#$dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDKInstallerUrl -installerFile $dotnetSDKInstallerFile -testPath $dotnetSDKPath
-#if ($dotnetInstallSuccess) {
-#    Write-Host ".NET SDK installation completed successfully!"
-#} else {
-#   Write-Host ".NET SDK installation failed. Please check the log file for more details."
-#    exit 1
-#}
+$dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDKInstallerUrl -installerFile $dotnetSDKInstallerFile -testPath $dotnetSDKPath
+if ($dotnetInstallSuccess) {
+    Write-Host ".NET SDK installation completed successfully!"
+} else {
+   Write-Host ".NET SDK installation failed. Please check the log file for more details."
+    exit 1
+}
 
 # Step 2: Instalar o jdk-17.0.11_windows-x64_bin
-#$jdkInstallSuccess = Install-JDK -installerFile $jdkInstallerFile -installDir $jdkInstallDir -logFile $jdkLogFile
-#if ($jdkInstallSuccess) {
-#    Write-Host "JDK installation completed successfully!"
-#} else {
-#    Write-Host "JDK installation failed. Please check the log file for more details."
-#    exit 1
-#}
+$jdkInstallSuccess = Install-JDK -installerFile $jdkInstallerFile -installDir $jdkInstallDir -logFile $jdkLogFile
+if ($jdkInstallSuccess) {
+    Write-Host "JDK installation completed successfully!"
+} else {
+    Write-Host "JDK installation failed. Please check the log file for more details."
+    exit 1
+}
 
-# Step 3.1 - Instalar o EpsonJavaPOS
-#Install-EpsonJavaPOS
+# Step 3 - copiar BluetoothIO.DLL, epsonjpos.dll, EthernetIO31.DLL, SerialIO31.dll, USBIO31.DLL de C:\Program Files\EPSON\JavaPOS\bin\ para C:\Program Files\Java\jdk-17\bin
+Copy-DLLFiles
 
-# Step 3.2 - Instalar o DatalogicJavaPOS
-#Install-DatalogicJavaPOS
+# Step 4 -  Adicionar nas variaveis de sistema (Path) C:\Program Files\Datalogic\JavaPOS\SupportJars
+Add-JavaPOSPath
 
-# Step 3.3 - Instalar o CitizenJavaPOS
-#Install-CitizenJavaPOS
+# Step 5 - É necessario copiar os ficheiros caso não existam brand.properties, dls.properties, ECIEncondig.csv, IHSParser.csv, LabelIdentifiers.csv e log4j2.xml para a pasta de deploy juntando ao ficheiro Devices-all.jar
+Copy-UtilsFiles
 
-# Step 4 - copiar BluetoothIO.DLL, epsonjpos.dll, EthernetIO31.DLL, SerialIO31.dll, USBIO31.DLL de C:\Program Files\EPSON\JavaPOS\bin\ para C:\Program Files\Java\jdk-17\bin
-#Copy-DLLFiles
+# Step 6 - Criar pasta C:\TotalCheckout\Database
+Create-TotalCheckoutDatabaseFolder
 
-# Step 5 -  Adicionar nas variaveis de sistema (Path) C:\Program Files\Datalogic\JavaPOS\SupportJars
-#Add-JavaPOSPath
+# Step 7 - Colocar ficheiro jpos na raiz da pasta C:\TotalCheckout
+Copy-JPOSXmlFile
 
-# Step 6 - É necessario copiar os ficheiros caso não existam brand.properties, dls.properties, ECIEncondig.csv, IHSParser.csv, LabelIdentifiers.csv e log4j2.xml para a pasta de deploy juntando ao ficheiro Devices-all.jar
-#Copy-UtilsFiles
+# Step 8 - Copiar a pasta nginx para  o C:\
+Copy-NginxFolder
 
-# Step 7 - Criar pasta C:\TotalCheckout\Database
-#Create-TotalCheckoutDatabaseFolder
+# Step 9 - Copiar a pasta nwjs para o C:\
+Copy-NwjsFolder
 
-# Step 8 - Colocar ficheiro jpos na raiz da pasta C:\TotalCheckout
-#Copy-JPOSXmlFile
+# Step 10 Copiar a pasta nssm para o C:\
+Copy-NssmFolder
 
-# Step 9 - Copiar a pasta nginx para  o C:\
-#Copy-NginxFolder
+# Step 11 - Donwload e instalação de FFmepg
+Download-And-Setup-FFmpeg
 
-# Step 10 - Copiar a pasta nwjs para o C:\
-#Copy-NwjsFolder
+# Step 12 - Copiar as soluções das APIs e UI para a pasta de release
+Copy-Services-Folders
 
-# Step 11 Copiar a pasta nssm para o C:\
-#Copy-NssmFolder
+# Step 13 - Criar os serviços windows para as APIS
+Create-Services
 
-# Step 12 - Donwload e instalação de FFmepg
-#Download-And-Setup-FFmpeg
+# Step 14 - Instalar a API de Devices como windows service usando o NSSM
+Istall-Devices-Service
 
-# Step 13 - Copiar as soluções das APIs e UI para a pasta de release
-#Copy-Services-Folders
+# Step 15 - Start de todos os serviços windows para TotalCheckoutPOS
+Start-TotalCheckoutPOSServices
 
-# Step 14 - Criar os serviços windows para as APIS
-#Create-Services
+# Step 16 - Instalar IaaS.exe como Windows Service via NSSM
+Install-IaaS-Service
 
-# Step 15 - Instalar a API de Devices como windows service usando o NSSM
-#Istall-Devices-Service
+# Step 17 - Instalar SQLServer Express para Olcas
+Install-SQLServerAndCreateUser
 
-# Step 16 - Start de todos os serviços windows para TotalCheckoutPOS
-#Start-TotalCheckoutPOSServices
+# Step 18.1 - Set Olcas Enviroment Variables
+Add-OlcasEnviroment-Variables
 
-# Step 17 - Instalar IaaS.exe como Windows Service via NSSM
-#Install-IaaS-Service
+# Step 18.2 - Copy Olcas Folder Content
+Copy-OlcasFolderContents -SourcePath "C:\TotalCheckout\PackagePOS\Olcas" -DestinationPath "C:\"
 
-# Step 18 - Instalar SQLServer Express para Olcas
-#Install-SQLServerAndCreateUser
+# Step 18.3 - Install Olcas Client
+Execute-InstallOlcasCmd
 
-# Step 19.1 - Set Olcas Enviroment Variables
-#Add-OlcasEnviroment-Variables
+# Step 19 - Copiar a pasta ServicesWindows para o C:\
+if ($Environment -eq "Dev") {
+    Write-Output "Environment is set to Dev. Running the copy function..."
+    Copy-FolderContents -SourceFolder "C:\TotalCheckout\PackagePOS\ServicesWindows" -DestinationFolder "C:\ServicesWindows"
+} elseif ($Environment -eq "Release") {
+    Write-Output "Environment is set to Release. Function will not run."
+} else {
+   Write-Output "Unknown environment value: '$Environment'. Function will not run."
+}
 
-# Step 19.2 - Copy Olcas Folder Content
-#Copy-OlcasFolderContents -SourcePath "C:\TotalCheckout\PackagePOS\Olcas" -DestinationPath "C:\"
-
-# Step 19.3 - Install Olcas Client
-#Execute-InstallOlcasCmd
-
-# Step 20 - Copiar a pasta ServicesWindows para o C:\
-#if ($Environment -eq "Dev") {
-#    Write-Output "Environment is set to Dev. Running the copy function..."
-#    Copy-FolderContents -SourceFolder "C:\TotalCheckout\PackagePOS\ServicesWindows" -DestinationFolder "C:\ServicesWindows"
-#} elseif ($Environment -eq "Release") {
-#    Write-Output "Environment is set to Release. Function will not run."
-#} else {
- #   Write-Output "Unknown environment value: '$Environment'. Function will not run."
-#}
-
-# Step 21 - Instalar .NET Framework 3.5
-#$setupPath = "C:\TotalCheckout\PackagePOS\dotNetFx35setup.exe"
-#Install-DotNetFramework -SetupPath $setupPath
+# Step 20 - Instalar .NET Framework 3.5
+$setupPath = "C:\TotalCheckout\PackagePOS\dotNetFx35setup.exe"
+Install-DotNetFramework -SetupPath $setupPath
 
 # Exemplo de execução por perfil:
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -UseInstallPlan
 
-#Write-Output "All installations are complete."
+Write-Output "All installations are complete."
