@@ -17,7 +17,7 @@ $dotnetSDKPath = "C:\Program Files\dotnet\sdk\$dotnetSDKVersion"
 
 # JDK Variables
 $jdkVersion = "17.0.11"
-$jdkInstallerFile = "$downloadFolder\jdk-$jdkVersion-windows-x64.exe"
+$jdkInstallerFile = "$downloadFolder\jdk-$jdkVersion`_windows-x64_bin.exe"
 $jdkInstallDir = "C:\Program Files\Java\jdk-$jdkVersion"
 $jdkLogFile = "$downloadFolder\jdk-install.log"
 $jdkInstallerUrl = "https://download.oracle.com/java/17/archive/jdk-17.0.11_windows-x64_bin.exe"
@@ -337,14 +337,18 @@ function Install-JDK {
         return $true
     }
 
-    # Download the JDK installer
-    try {
-        Write-Host "Downloading JDK to $installDir..."
-        Invoke-WebRequest -Uri $jdkInstallerUrl -OutFile $installerFile -UseBasicParsing
-        Write-Host "JDK download completed."
-    } catch {
-        Write-Host "Failed to download JDK. Error: $($_.Exception.Message)"
-        exit 1
+    # Download the JDK installer only when it does not already exist in install-pos
+    if (Test-Path $installerFile) {
+        Write-Host "JDK installer already exists at $installerFile. Skipping download."
+    } else {
+        try {
+            Write-Host "Downloading JDK to $installDir..."
+            Invoke-WebRequest -Uri $jdkInstallerUrl -OutFile $installerFile -UseBasicParsing
+            Write-Host "JDK download completed."
+        } catch {
+            Write-Host "Failed to download JDK. Error: $($_.Exception.Message)"
+            exit 1
+        }
     }
 
     # Run the JDK installer silently
