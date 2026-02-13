@@ -281,13 +281,17 @@ function Install-DotnetSDK {
         return $true
     }
 
-    try {
-        Write-Host "Downloading .NET SDK $version..."
-        Invoke-WebRequest -Uri $installerUrl -OutFile $installerFile -UseBasicParsing
-        Write-Host "Download completed."
-    } catch {
-        Write-Host "❌ Failed to download .NET SDK. Error: $($_.Exception.Message)"
-        return $false
+    if (Test-Path $installerFile) {
+        Write-Host ".NET SDK installer already exists at $installerFile. Skipping download."
+    } else {
+        try {
+            Write-Host "Downloading .NET SDK $version..."
+            Invoke-WebRequest -Uri $installerUrl -OutFile $installerFile -UseBasicParsing
+            Write-Host "Download completed."
+        } catch {
+            Write-Host "❌ Failed to download .NET SDK. Error: $($_.Exception.Message)"
+            return $false
+        }
     }
 
     try {
