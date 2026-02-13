@@ -317,6 +317,17 @@ function Install-DotnetSDK {
     }
 }
 
+function Invoke-DotnetSdkInstallStep {
+    $dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDKInstallerUrl -installerFile $dotnetSDKInstallerFile -testPath $dotnetSDKPath
+    if ($dotnetInstallSuccess) {
+        Write-Host ".NET SDK installation completed successfully!"
+    }
+    else {
+        Write-Host ".NET SDK installation failed. Please check the log file for more details."
+        exit 1
+    }
+}
+
 # Function to install the JDK
 function Install-JDK {
     param (
@@ -370,6 +381,17 @@ function Install-JDK {
         Write-Host "Installation failed or incomplete. Check the logs for more details."
         Write-Host "Logs can be found at: $logFile"
         return $false
+    }
+}
+
+function Invoke-JdkInstallStep {
+    $jdkInstallSuccess = Install-JDK -installerFile $jdkInstallerFile -installDir $jdkInstallDir -logFile $jdkLogFile
+    if ($jdkInstallSuccess) {
+        Write-Host "JDK installation completed successfully!"
+    }
+    else {
+        Write-Host "JDK installation failed. Please check the log file for more details."
+        exit 1
     }
 }
 
@@ -1059,6 +1081,12 @@ function Execute-InstallOlcasCmd {
     Start-Process "install.cmd" -NoNewWindow -Wait
 }
 
+function Invoke-OlcasInstallStep {
+    Add-OlcasEnviroment-Variables
+    Copy-OlcasFolderContents -SourcePath "C:\TotalCheckout\PackagePOS\Olcas" -DestinationPath "C:\"
+    Execute-InstallOlcasCmd
+}
+
 
 function Invoke-PeripheralInstallPlan {
     param(
@@ -1092,6 +1120,19 @@ function Invoke-PeripheralInstallPlan {
     }
 }
 
+function Invoke-PeripheralInstallStep {
+    param(
+        $Profile
+    )
+
+    if ($null -eq $Profile) {
+        Write-Warning "Nenhum perfil POS foi carregado. Passo de periféricos ignorado."
+        return
+    }
+
+    Invoke-PeripheralInstallPlan -Profile $Profile
+}
+
 # Define the environment variable
 $Environment = "Dev" # Change this to "Release" to prevent the function from running
 
@@ -1123,6 +1164,19 @@ function Copy-FolderContents {
     }
     catch {
         Write-Error "An error occurred: $_"
+    }
+}
+
+function Invoke-ServicesWindowsCopyStep {
+    if ($Environment -eq "Dev") {
+        Write-Output "Environment is set to Dev. Running the copy function..."
+        Copy-FolderContents -SourceFolder "C:\TotalCheckout\PackagePOS\ServicesWindows" -DestinationFolder "C:\ServicesWindows"
+    }
+    elseif ($Environment -eq "Release") {
+        Write-Output "Environment is set to Release. Function will not run."
+    }
+    else {
+        Write-Output "Unknown environment value: '$Environment'. Function will not run."
     }
 }
 
@@ -1173,6 +1227,11 @@ Function Install-DotNetFramework {
     } Catch {
         Write-Output "An error occurred during the installation: $_"
     }
+}
+
+function Invoke-DotNetFrameworkInstallStep {
+    $setupPath = "C:\TotalCheckout\PackagePOS\dotNetFx35setup.exe"
+    Install-DotNetFramework -SetupPath $setupPath
 }
 
 function Install-IaaS-Service {
@@ -1255,9 +1314,7 @@ function Resolve-SelectedInstallSteps {
         return $AvailableSteps
     }
 
-    $stepAliases = @{
-        "18" = @("18.1", "18.2", "18.3")
-    }
+    $stepAliases = @{}
 
     $invalidSteps = New-Object System.Collections.Generic.List[string]
     $selectedSteps = New-Object System.Collections.Generic.HashSet[string]
@@ -1323,8 +1380,6 @@ try {
 }
 
 if ($UseInstallPlan -and $null -ne $PosProfile) {
-    Invoke-PeripheralInstallPlan -Profile $PosProfile
-
     $profileEnvVarsObject = Get-ProfileValue -Node $PosProfile.environment -PropertyName "variables" -DefaultValue $null
     if ($null -ne $profileEnvVarsObject) {
         $profileEnvVars = ConvertTo-Hashtable -InputObject $profileEnvVarsObject
@@ -1336,27 +1391,19 @@ $stepDefinitions = [ordered]@{
     "1" = @{
         Description = "Install .NET SDK 8.0.401"
         Action      = {
-            $dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDKInstallerUrl -installerFile $dotnetSDKInstallerFile -testPath $dotnetSDKPath
-            if ($dotnetInstallSuccess) {
-                Write-Host ".NET SDK installation completed successfully!"
-            }
-            else {
-                Write-Host ".NET SDK installation failed. Please check the log file for more details."
-                exit 1
-            }
+            Invoke-DotnetSdkInstallStep
         }
     }
     "2" = @{
         Description = "Instalar o jdk-17.0.11_windows-x64_bin"
         Action      = {
-            $jdkInstallSuccess = Install-JDK -installerFile $jdkInstallerFile -installDir $jdkInstallDir -logFile $jdkLogFile
-            if ($jdkInstallSuccess) {
-                Write-Host "JDK installation completed successfully!"
-            }
-            else {
-                Write-Host "JDK installation failed. Please check the log file for more details."
-                exit 1
-            }
+            Invoke-JdkInstallStep
+        }
+    }
+    "2.1" = @{
+        Description = "Instalar periféricos do perfil POS"
+        Action      = {
+            Invoke-PeripheralInstallStep -Profile $PosProfile
         }
     }
     "3" = @{ Description = "Copiar DLLs Epson para o Java bin"; Action = { Copy-DLLFiles } }
@@ -1374,29 +1421,22 @@ $stepDefinitions = [ordered]@{
     "15" = @{ Description = "Iniciar serviços Windows do TotalCheckoutPOS"; Action = { Start-TotalCheckoutPOSServices } }
     "16" = @{ Description = "Instalar IaaS.exe como Windows Service"; Action = { Install-IaaS-Service } }
     "17" = @{ Description = "Instalar SQL Server Express para Olcas"; Action = { Install-SQLServerAndCreateUser } }
-    "18.1" = @{ Description = "Definir variáveis de ambiente Olcas"; Action = { Add-OlcasEnviroment-Variables } }
-    "18.2" = @{ Description = "Copiar conteúdo da pasta Olcas"; Action = { Copy-OlcasFolderContents -SourcePath "C:\TotalCheckout\PackagePOS\Olcas" -DestinationPath "C:\" } }
-    "18.3" = @{ Description = "Instalar Olcas Client"; Action = { Execute-InstallOlcasCmd } }
+    "18" = @{
+        Description = "Configurar e instalar Olcas"
+        Action      = {
+            Invoke-OlcasInstallStep
+        }
+    }
     "19" = @{
         Description = "Copiar ServicesWindows para C:\"
         Action      = {
-            if ($Environment -eq "Dev") {
-                Write-Output "Environment is set to Dev. Running the copy function..."
-                Copy-FolderContents -SourceFolder "C:\TotalCheckout\PackagePOS\ServicesWindows" -DestinationFolder "C:\ServicesWindows"
-            }
-            elseif ($Environment -eq "Release") {
-                Write-Output "Environment is set to Release. Function will not run."
-            }
-            else {
-                Write-Output "Unknown environment value: '$Environment'. Function will not run."
-            }
+            Invoke-ServicesWindowsCopyStep
         }
     }
     "20" = @{
         Description = "Instalar .NET Framework 3.5"
         Action      = {
-            $setupPath = "C:\TotalCheckout\PackagePOS\dotNetFx35setup.exe"
-            Install-DotNetFramework -SetupPath $setupPath
+            Invoke-DotNetFrameworkInstallStep
         }
     }
 }
