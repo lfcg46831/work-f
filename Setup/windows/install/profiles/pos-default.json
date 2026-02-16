@@ -24,7 +24,7 @@
     {
       "name": "printer-citizen",
       "installer": "citizen-printer",
-      "enabled": false
+      "enabled": true
     },
     {
       "name": "cash-drawer-hp",
