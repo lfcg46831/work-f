@@ -22,7 +22,7 @@ if ($existingService) {
     Write-Host "Existing service found. Stopping..."
     Stop-Service -Name $ServiceName -Force -ErrorAction SilentlyContinue
 
-    # Esperar até o processo Java ser finalizado
+    # Esperar atÃ© o processo Java ser finalizado
     Get-Process java -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*$WorkingDir*" } | ForEach-Object {
         Write-Host "Waiting for process $($_.Id) to exit..."
         $_ | Wait-Process
@@ -77,16 +77,16 @@ if (-Not (Test-Path -Path $DropJarPath)) {
 Write-Host "Copying new JAR from $DropJarPath to $JarFile"
 Copy-Item -Path $DropJarPath -Destination $JarFile -Force
 
-$DropConfigPath = Join-Path -Path $AgentPath -ChildPath "TotalCheckoutPOS.Devices\drop\config\$ConfigFileName"
+$DropResourcesPath = Join-Path -Path $AgentPath -ChildPath "TotalCheckoutPOS.Devices\drop\resources"
 
-# Validate and copy Config from drop
-if (-Not (Test-Path -Path $DropConfigPath)) {
-    Write-Error "Config file not found at: $DropConfigPath"
+# Validate and copy resources from drop
+if (-Not (Test-Path -Path $DropResourcesPath)) {
+    Write-Error "Resources folder not found at: $DropResourcesPath"
     exit 1
 }
 
-Write-Host "Copying new Config from $DropConfigPath to $ConfigFile"
-Copy-Item -Path $DropConfigPath -Destination $ConfigFile -Force
+Write-Host "Copying resources from $DropResourcesPath to $WorkingDir"
+Copy-Item -Path "$DropResourcesPath\*" -Destination $WorkingDir -Recurse -Force
 
 # Copy Utils files if available
 if (Test-Path $UtilsSource) {
