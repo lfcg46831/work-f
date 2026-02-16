@@ -1541,29 +1541,29 @@ $stepDefinitions = [ordered]@{
     "12" = @{ 
 		Description = "Instalar IaaS.exe como Windows Service"; 
 		Action = { Install-IaaS-Service } }
-    "13" = @{ 
-		Description = "Instalar SQL Server Express para Olcas"; 
-		Action = { Install-SQLServerAndCreateUser } }
-    "14" = @{
-        Description = "Configurar e instalar Olcas"
-        Action = { Invoke-OlcasInstallStep }
-    }
-    "15" = @{
+    "13" = @{
         Description = "Copiar ServicesWindows para C:\"
         Action = { Invoke-ServicesWindowsCopyStep }
     }
-	"16" = @{ 
+	"14" = @{ 
 		Description = "Copiar soluções para releases"; 
 		Action = { Copy-Services-Folders } }
-    "17" = @{ 
+    "15" = @{ 
 		Description = "Criar serviços Windows para APIs"; 
 		Action = { Create-Services } }
-    "18" = @{ 
+    "16" = @{ 
 		Description = "Instalar Devices API como Windows Service"; 
 		Action = { Install-Devices-Service } }
-    "19" = @{ 
+    "17" = @{ 
 		Description = "Iniciar serviços Windows do TotalCheckoutPOS"; 
 		Action = { Start-TotalCheckoutPOSServices } }
+	#"18" = @{ 
+	#	Description = "Instalar SQL Server Express para Olcas"; 
+	#	Action = { Install-SQLServerAndCreateUser } }
+    #"19" = @{
+    #    Description = "Configurar e instalar Olcas"
+    #    Action = { Invoke-OlcasInstallStep }
+    #}
 }
 
 $availableSteps = @($stepDefinitions.Keys)
