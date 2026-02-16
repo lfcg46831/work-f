@@ -655,10 +655,10 @@ function Copy-NwjsFolder {
     # Check if the source folder exists
     if (Test-Path -Path $sourceFolderForNwjs) {
         # Copy the folder to the destination
-        Copy-Item -Path $sourceFolderForNwjs -Destination $destinationFolderForNwjs -Recurse -Force
+        Copy-Item -Path $sourceFolderForNwjs -Destination $destinationFolderForNwjs -Recurse -Force -ErrorAction Stop
         Write-Output "Folder successfully copied to: $destinationFolderForNwjs"
     } else {
-        Write-Output "Source folder not found: $sourceFolderForNwjs"
+        throw "Source folder not found: $sourceFolderForNwjs. Aborting script execution."
     }
 }
 
