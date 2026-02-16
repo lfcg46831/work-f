@@ -513,10 +513,15 @@ function Install-CitizenJavaPOS {
 
     Write-Output "Installing Citizen JavaPOS from $citizenInstallerPath..."
     try {
-        Start-Process -FilePath $citizenInstallerPath -ArgumentList "/S /v/qn" -Wait -PassThru -NoNewWindow
+        $process = Start-Process -FilePath $citizenInstallerPath -ArgumentList "/S /v/qn" -Wait -PassThru -NoNewWindow
+        if ($process.ExitCode -ne 0) {
+            throw "Citizen JavaPOS installer exited with code $($process.ExitCode)."
+        }
+
         Write-Output "Citizen JavaPOS installation completed successfully."
     } catch {
         Write-Error "An error occurred during Citizen JavaPOS installation: $_"
+        exit 1
     }
 }
 
