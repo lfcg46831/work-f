@@ -78,7 +78,7 @@ $sourceFolderForNwjs = "C:\TotalCheckout\PackagePOS\runtimes\nwjs"
 $destinationFolderForNwjs = "C:\nwjs"
 
 # Define the source and destination paths for nssm
-$sourceFolderForNssm = "C:\TotalCheckout\PackagePOS\nssm"
+$sourceFolderForNssm = "C:\TotalCheckout\PackagePOS\tools\nssm"
 $destinationFolderForNssm = "C:\nssm"
 
 # Define the URL for the FFmpeg build and local download path
