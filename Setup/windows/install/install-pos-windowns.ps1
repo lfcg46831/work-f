@@ -648,10 +648,10 @@ function Copy-JPOSXmlFile {
     # Check if the source file exists
     if (Test-Path -Path $sourceFileForJpos) {
         # Copy the file to the destination
-        Copy-Item -Path $sourceFileForJpos -Destination $destinationFolder -Force
+        Copy-Item -Path $sourceFileForJpos -Destination $destinationFolder -Force -ErrorAction Stop
         Write-Output "File successfully copied to: $jposDestinationFile"
     } else {
-        Write-Output "Source file not found: $sourceFileForJpos"
+        throw "Source file not found: $sourceFileForJpos. Aborting script execution."
     }
 }
 
