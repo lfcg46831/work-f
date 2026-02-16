@@ -2,8 +2,6 @@
   "model": "pos-default",
   "description": "Perfil base para instalação de POS com periféricos selecionáveis.",
   "paths": {
-    "jposSource": "C:\\TotalCheckout\\PackagePOS\\jpos.xml",
-    "jposDestinationFolder": "C:\\TotalCheckout",
     "databaseFolder": "C:\\TotalCheckout\\Database",
     "nginxSource": "C:\\TotalCheckout\\PackagePOS\\nginx",
     "nginxDestination": "C:\\nginx",
