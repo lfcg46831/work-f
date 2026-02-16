@@ -5,13 +5,7 @@ $JarFileName = "Devices-all.jar"
 $ConfigFileName = "application.properties"
 $JarFile = Join-Path $WorkingDir $JarFileName
 $ConfigFile = Join-Path $WorkingDir $ConfigFileName
-$Log4jFile = Join-Path $WorkingDir "log4j2.xml"
-$NssmPath = "C:\nssm\win64\nssm.exe"
 $UtilsSource = "C:\TotalCheckoutPOS.UI.Utils\LinuxConfigs\Utils\"
-
-# Java and library paths
-$JavaPath = "C:\Program Files\Java\jdk-17.0.11\bin\java.exe"
-$LibPath = "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib;C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib\x64;C:\Program Files\Datalogic\JavaPOS;C:\Program Files\Datalogic\JavaPOS\SupportJars;C:\Program Files\EPSON\JavaPOS\lib;C:\Program Files\EPSON\JavaPOS\bin;C:\Program Files\EPSON\JavaPOS\SetupPOS"
 
 Write-Host "Starting update process for service '$ServiceName'..."
 
@@ -28,32 +22,8 @@ if ($existingService) {
         $_ | Wait-Process
     }
 } else {
-    Write-Host "Service '$ServiceName' not found. Installing service..."
-    & $NssmPath install $ServiceName $JavaPath "-Dmicronaut.config.files=$ConfigFile" "-Djava.library.path=$LibPath" "-Dlog4j.configurationFile=$Log4jFile" -jar $JarFile
-	if (!$?) {
-		Write-Error "Error creating service! Exiting..."
-		exit 1
-	}
-	
-    & $NssmPath set $ServiceName AppDirectory $WorkingDir
-	if (!$?) {
-		Write-Error "Error setting AppDirectory! Exiting..."
-		exit 1
-	}
-	
-    & $NssmPath set $ServiceName DisplayName "TotalCheckoutPOS.Devices.Api"
-	if (!$?) {
-		Write-Error "Error setting DisplayName! Exiting..."
-		exit 1
-	}
-	
-    & $NssmPath set $ServiceName Start SERVICE_AUTO_START
-	if (!$?) {
-		Write-Error "Error setting Start! Exiting..."
-		exit 1
-	}
-	
-	Write-Output "Service '$ServiceName' installed successfully."
+    Write-Error "Service '$ServiceName' not found. Deployment aborted."
+    exit 1
 }
 
 # Ensure working directory exists
