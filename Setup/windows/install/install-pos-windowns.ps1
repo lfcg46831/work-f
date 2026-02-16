@@ -708,7 +708,7 @@ function Copy-UtilsFiles {
                 Write-Output "File already exists, skipping: $file"
             }
         } else {
-            Write-Output "Source file not found, skipping: $file"
+            throw "Source file not found: $sourceFile"
         }
     }
 
