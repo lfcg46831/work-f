@@ -74,7 +74,7 @@ $sourceFolderForNginx = "C:\TotalCheckout\PackagePOS\nginx"
 $destinationFolderForNginx = "C:\nginx"
 
 # Define the source and destination paths for nwjs
-$sourceFolderForNwjs = "C:\TotalCheckout\PackagePOS\nwjs"
+$sourceFolderForNwjs = "C:\TotalCheckout\PackagePOS\runtimes\nwjs"
 $destinationFolderForNwjs = "C:\nwjs"
 
 # Define the source and destination paths for nssm
