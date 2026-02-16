@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 
 # Define paths and variables
 $downloadPath = "C:\TotalCheckout"
-$downloadFolder = "$downloadPath\install-pos"
+$downloadFolder = "$downloadPath\PackagePOS\runtimes"
 $logFile = "$downloadFolder\install-log.txt"
 
 # .NET SDK Variables
@@ -354,7 +354,7 @@ function Install-JDK {
         return $true
     }
 
-    # Download the JDK installer only when it does not already exist in install-pos
+    # Download the JDK installer only when it does not already exist in PackagePOS\runtimes
     if (Test-Path $installerFile) {
         Write-Host "JDK installer already exists at $installerFile. Skipping download."
     } else {
@@ -722,7 +722,7 @@ function Download-And-Setup-FFmpeg {
         Write-Output "Download complete: $downloadPathFFmpeg"
     }
 
-    # Extract the zip file to a temporary location inside install-pos
+    # Extract the zip file to a temporary location inside PackagePOS\runtimes
     $tempExtractPath = Join-Path -Path $downloadFolder -ChildPath "ffmpeg-temp"
     if (Test-Path -Path $tempExtractPath) {
         Remove-Item -Path $tempExtractPath -Recurse -Force
