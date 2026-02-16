@@ -107,6 +107,11 @@ $IaaSExePath = "C:\POS_Main\IaaS.exe"
 $IaaSWorkingDir = "C:\POS_Main"
 $IaaSPort = "10000"
 $IaaSConfigPath = "C:\POS_MAIN\Configuration.dat"
+$IngelinkSourceFiles = @(
+    "C:\TotalCheckout\PackagePOS\Ingelink\Configuration.dat",
+    "C:\TotalCheckout\PackagePOS\Ingelink\RPConfig.dat"
+)
+$POSMainDestination = "C:\POS_MAIN"
 $NSSM_PATH = "C:\nssm\win64\nssm.exe"
 
 # Perfil POS carregado de um ficheiro JSON (opcional)
@@ -1286,6 +1291,16 @@ function Invoke-DotNetFrameworkInstallStep {
 }
 
 function Install-IaaS-Service {
+    foreach ($sourceFile in $IngelinkSourceFiles) {
+        if (-Not (Test-Path -Path $sourceFile)) {
+            Write-Error "Required Ingelink file not found at '$sourceFile'."
+            exit 1
+        }
+
+        Write-Output "Copying '$sourceFile' to '$POSMainDestination'..."
+        Copy-Item -Path $sourceFile -Destination $POSMainDestination -Force
+    }
+
     # Validations
     if (-Not (Test-Path -Path $NSSM_PATH)) {
         Write-Error "NSSM not found at '$NSSM_PATH'. Did you run Copy-NssmFolder?"
