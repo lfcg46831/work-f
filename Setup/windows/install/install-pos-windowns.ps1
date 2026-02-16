@@ -24,6 +24,9 @@ $jdkInstallDir = "C:\Program Files\Java\jdk-$jdkVersion"
 $jdkLogFile = "$downloadFolder\jdk-install.log"
 $jdkInstallerUrl = "https://download.oracle.com/java/17/archive/jdk-17.0.11_windows-x64_bin.exe"
 
+# Microsoft Visual C++ Redistributable (x64)
+$vcRedistInstallerPath = "C:\TotalCheckout\PackagePOS\VC_redist.x64.exe"
+
 # Define the paths for Epson JavaPOS
 $epsonInstallFolder = "C:\TotalCheckout\PackagePOS\Epson_JavaPOS_ADK_11429"
 $epsonInstallerName = "EPSON_JavaPOS_1.14.29.exe"
@@ -411,6 +414,26 @@ function Invoke-JdkInstallStep {
         Write-Host "JDK installation failed. Please check the log file for more details."
         exit 1
     }
+}
+
+function Install-VCRedist {
+    if (-Not (Test-Path -Path $vcRedistInstallerPath)) {
+        throw "VC++ Redistributable installer not found at '$vcRedistInstallerPath'."
+    }
+
+    Write-Output "Installing Microsoft Visual C++ Redistributable (x64) from '$vcRedistInstallerPath'..."
+    $process = Start-Process -FilePath $vcRedistInstallerPath -ArgumentList "/install /quiet /norestart" -Wait -PassThru -NoNewWindow
+
+    if ($process.ExitCode -in @(0, 1638, 3010)) {
+        Write-Output "Microsoft Visual C++ Redistributable (x64) installation completed with exit code $($process.ExitCode)."
+        return
+    }
+
+    throw "VC++ Redistributable installation failed with exit code $($process.ExitCode)."
+}
+
+function Invoke-VCRedistInstallStep {
+    Install-VCRedist
 }
 
 # Function to install Epson JavaPOS
@@ -1467,6 +1490,10 @@ $stepDefinitions = [ordered]@{
     "2" = @{
         Description = "Instalar o jdk-17.0.11_windows-x64_bin"
         Action = { Invoke-JdkInstallStep }
+    }
+    "18" = @{
+        Description = "Instalar Microsoft Visual C++ Redistributable (x64)"
+        Action = { Invoke-VCRedistInstallStep }
     }
     "3" = @{
         Description = "Instalar periféricos do perfil POS"
