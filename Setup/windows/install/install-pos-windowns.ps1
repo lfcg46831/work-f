@@ -107,8 +107,8 @@ $IaaSWorkingDir = "C:\POS_Main"
 $IaaSPort = "10000"
 $IaaSConfigPath = "C:\POS_MAIN\Configuration.dat"
 $IngelinkSourceFiles = @(
-    "C:\TotalCheckout\PackagePOS\Ingelink\Configuration.dat",
-    "C:\TotalCheckout\PackagePOS\Ingelink\RPConfig.dat"
+    "C:\TotalCheckout\PackagePOS\payments\Ingelink\Configuration.dat",
+    "C:\TotalCheckout\PackagePOS\payments\Ingelink\RPConfig.dat"
 )
 $POSMainDestination = "C:\POS_MAIN"
 $NSSM_PATH = "C:\nssm\win64\nssm.exe"
