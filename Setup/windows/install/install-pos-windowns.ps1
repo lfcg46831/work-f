@@ -24,8 +24,9 @@ $jdkInstallDir = "C:\Program Files\Java\jdk-$jdkVersion"
 $jdkLogFile = "$downloadFolder\jdk-install.log"
 $jdkInstallerUrl = "https://download.oracle.com/java/17/archive/jdk-17.0.11_windows-x64_bin.exe"
 
-# Microsoft Visual C++ Redistributable (x64)
-$vcRedistInstallerPath = "C:\TotalCheckout\PackagePOS\VC_redist.x64.exe"
+# Microsoft Visual C++ Redistributable
+$vcRedist86InstallerPath = "C:\TotalCheckout\PackagePOS\VC_redist.x86.exe"
+$vcRedist64InstallerPath = "C:\TotalCheckout\PackagePOS\VC_redist.x64.exe"
 
 # Define the paths for Epson JavaPOS
 $epsonInstallFolder = "C:\TotalCheckout\PackagePOS\Epson_JavaPOS_ADK_11429"
@@ -416,13 +417,38 @@ function Invoke-JdkInstallStep {
     }
 }
 
-function Install-VCRedist {
-    if (-Not (Test-Path -Path $vcRedistInstallerPath)) {
-        throw "VC++ Redistributable installer not found at '$vcRedistInstallerPath'."
+function Install-VCRedist86 {
+    if (-Not (Test-Path -Path $vcRedist86InstallerPath)) {
+        throw "VC++ Redistributable installer not found at '$vcRedist86InstallerPath'."
     }
 
-    Write-Output "Installing Microsoft Visual C++ Redistributable (x64) from '$vcRedistInstallerPath'..."
-    $process = Start-Process -FilePath $vcRedistInstallerPath -ArgumentList "/install /quiet /norestart" -Wait -PassThru -NoNewWindow
+    Write-Output "Installing Microsoft Visual C++ Redistributable (x86) from '$vcRedist86InstallerPath'..."
+    $process = Start-Process -FilePath $vcRedist86InstallerPath -ArgumentList "/install /quiet /norestart" -Wait -PassThru -NoNewWindow
+
+    if ($process.ExitCode -in @(0, 1638, 3010)) {
+        Write-Output "Microsoft Visual C++ Redistributable (x86) installation completed with exit code $($process.ExitCode)."
+        return
+    }
+
+    throw "VC++ Redistributable installation failed with exit code $($process.ExitCode)."
+}
+
+function Invoke-VCRedist86InstallStep {
+    Install-VCRedist86
+}
+
+function Invoke-VCRedistInstallStep {
+    Install-VCRedist86
+    Install-VCRedist64
+}
+
+function Install-VCRedist64 {
+    if (-Not (Test-Path -Path $vcRedist64InstallerPath)) {
+        throw "VC++ Redistributable installer not found at '$vcRedist64InstallerPath'."
+    }
+
+    Write-Output "Installing Microsoft Visual C++ Redistributable (x64) from '$vcRedist64InstallerPath'..."
+    $process = Start-Process -FilePath $vcRedist64InstallerPath -ArgumentList "/install /quiet /norestart" -Wait -PassThru -NoNewWindow
 
     if ($process.ExitCode -in @(0, 1638, 3010)) {
         Write-Output "Microsoft Visual C++ Redistributable (x64) installation completed with exit code $($process.ExitCode)."
@@ -432,8 +458,8 @@ function Install-VCRedist {
     throw "VC++ Redistributable installation failed with exit code $($process.ExitCode)."
 }
 
-function Invoke-VCRedistInstallStep {
-    Install-VCRedist
+function Invoke-VCRedist64InstallStep {
+    Install-VCRedist64
 }
 
 # Function to install Epson JavaPOS
@@ -979,7 +1005,6 @@ else {
 
 }
 
-
 function Start-TotalCheckoutPOSServices {
     # Define a string that uniquely identifies services related to TotalCheckoutPOS
     $serviceNamePattern = "TotalCheckoutPOS"
@@ -1008,8 +1033,6 @@ function Start-TotalCheckoutPOSServices {
         }
     }
 }
-
-
 
 function Install-SQLServerAndCreateUser {
     $installerPath = "C:\TotalCheckout\PackagePOS\SQL2019-SSEI-Expr.exe"
@@ -1051,7 +1074,6 @@ function Install-SQLServerAndCreateUser {
 
     Write-Host "User '$newUsername' created successfully."
 }
-
 
 function Add-OlcasEnviroment-Variables{
     param (
@@ -1105,9 +1127,7 @@ function Add-OlcasEnviroment-Variables{
     }
     
     Write-Output "All environment variables have been added or validated successfully!"
-
 }
-
 
 function Copy-OlcasFolderContents {
     param (
@@ -1147,7 +1167,6 @@ function Copy-OlcasFolderContents {
     }
 }
 
-
 function Execute-InstallOlcasCmd {
     # Navigate to the directory
     Set-Location -Path "C:\Olcas\Install"
@@ -1161,7 +1180,6 @@ function Invoke-OlcasInstallStep {
     Copy-OlcasFolderContents -SourcePath "C:\TotalCheckout\PackagePOS\Olcas" -DestinationPath "C:\"
     Execute-InstallOlcasCmd
 }
-
 
 function Invoke-PeripheralInstallPlan {
     param(
@@ -1462,7 +1480,6 @@ function Invoke-InstallStep {
     }
 }
 
-
 # Main Script Execution
 Write-Output "Starting installation process..."
 
@@ -1496,7 +1513,7 @@ $stepDefinitions = [ordered]@{
         Action = { Invoke-JdkInstallStep }
     }
     "4" = @{
-        Description = "Instalar Microsoft Visual C++ Redistributable (x64)"
+        Description = "Instalar Microsoft Visual C++ Redistributable"
         Action = { Invoke-VCRedistInstallStep }
     }
     "5" = @{
