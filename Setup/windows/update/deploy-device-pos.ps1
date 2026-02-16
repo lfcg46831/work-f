@@ -5,13 +5,7 @@ $JarFileName = "Devices-all.jar"
 $ConfigFileName = "application.properties"
 $JarFile = Join-Path $WorkingDir $JarFileName
 $ConfigFile = Join-Path $WorkingDir $ConfigFileName
-$Log4jFile = Join-Path $WorkingDir "log4j2.xml"
-$NssmPath = "C:\nssm\win64\nssm.exe"
 $UtilsSource = "C:\TotalCheckoutPOS.UI.Utils\LinuxConfigs\Utils\"
-
-# Java and library paths
-$JavaPath = "C:\Program Files\Java\jdk-17.0.11\bin\java.exe"
-$LibPath = "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib;C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib\x64;C:\Program Files\Datalogic\JavaPOS;C:\Program Files\Datalogic\JavaPOS\SupportJars;C:\Program Files\EPSON\JavaPOS\lib;C:\Program Files\EPSON\JavaPOS\bin;C:\Program Files\EPSON\JavaPOS\SetupPOS"
 
 Write-Host "Starting update process for service '$ServiceName'..."
 
