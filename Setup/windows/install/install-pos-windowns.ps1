@@ -70,7 +70,7 @@ $currentPath = [System.Environment]::GetEnvironmentVariable('Path', [System.Envi
 $folderPath = "C:\TotalCheckout\Database"
 
 # Define the source and destination paths for nginx
-$sourceFolderForNginx = "C:\TotalCheckout\PackagePOS\nginx"
+$sourceFolderForNginx = "C:\TotalCheckout\PackagePOS\infra\nginx"
 $destinationFolderForNginx = "C:\nginx"
 
 # Define the source and destination paths for nwjs
