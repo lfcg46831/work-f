@@ -1487,61 +1487,61 @@ $stepDefinitions = [ordered]@{
         Description = "Install .NET SDK 8.0.401"
         Action = { Invoke-DotnetSdkInstallStep }
     }
-    "2" = @{
-        Description = "Instalar o jdk-17.0.11_windows-x64_bin"
-        Action = { Invoke-JdkInstallStep }
-    }
-    "18" = @{
-        Description = "Instalar Microsoft Visual C++ Redistributable (x64)"
-        Action = { Invoke-VCRedistInstallStep }
-    }
-    "3" = @{
-        Description = "Instalar periféricos do perfil POS"
-        Action = { Invoke-PeripheralInstallStep -Profile $PosProfile }
-    }
-    "4" = @{ 
-		Description = "Criar pasta C:\TotalCheckout\Database"; 
-		Action = { Create-TotalCheckoutDatabaseFolder } }
-    "5" = @{ 
-		Description = "Copiar jpos.xml"; 
-		Action = { Copy-JPOSXmlFile } }
-    "6" = @{ 
-		Description = "Copiar pasta nginx"; 
-		Action = { Copy-NginxFolder } }
-    "7" = @{ 
-		Description = "Copiar pasta nwjs"; 
-		Action = { Copy-NwjsFolder } }
-    "8" = @{ 
-		Description = "Copiar pasta nssm"; 
-		Action = { Copy-NssmFolder } }
-    "9" = @{ 
-		Description = "Download e instalação de FFmpeg"; 
-		Action = { Download-And-Setup-FFmpeg } }
-    "10" = @{ 
-		Description = "Instalar IaaS.exe como Windows Service"; 
-		Action = { Install-IaaS-Service } }
-    "11" = @{ 
-		Description = "Instalar SQL Server Express para Olcas"; 
-		Action = { Install-SQLServerAndCreateUser } }
-    "12" = @{
-        Description = "Configurar e instalar Olcas"
-        Action = { Invoke-OlcasInstallStep }
-    }
-    "13" = @{
-        Description = "Copiar ServicesWindows para C:\"
-        Action = { Invoke-ServicesWindowsCopyStep }
-    }
-    "14" = @{
+	"2" = @{
         Description = "Instalar .NET Framework 3.5"
         Action = { Invoke-DotNetFrameworkInstallStep }
     }
-	"15" = @{ 
+    "3" = @{
+        Description = "Instalar o jdk-17.0.11_windows-x64_bin"
+        Action = { Invoke-JdkInstallStep }
+    }
+    "4" = @{
+        Description = "Instalar Microsoft Visual C++ Redistributable (x64)"
+        Action = { Invoke-VCRedistInstallStep }
+    }
+    "5" = @{
+        Description = "Instalar periféricos do perfil POS"
+        Action = { Invoke-PeripheralInstallStep -Profile $PosProfile }
+    }
+    "6" = @{ 
+		Description = "Criar pasta C:\TotalCheckout\Database"; 
+		Action = { Create-TotalCheckoutDatabaseFolder } }
+    "7" = @{ 
+		Description = "Copiar jpos.xml"; 
+		Action = { Copy-JPOSXmlFile } }
+    "8" = @{ 
+		Description = "Copiar pasta nginx"; 
+		Action = { Copy-NginxFolder } }
+    "9" = @{ 
+		Description = "Copiar pasta nwjs"; 
+		Action = { Copy-NwjsFolder } }
+    "10" = @{ 
+		Description = "Copiar pasta nssm"; 
+		Action = { Copy-NssmFolder } }
+    "11" = @{ 
+		Description = "Download e instalação de FFmpeg"; 
+		Action = { Download-And-Setup-FFmpeg } }
+    "12" = @{ 
+		Description = "Instalar IaaS.exe como Windows Service"; 
+		Action = { Install-IaaS-Service } }
+    "13" = @{ 
+		Description = "Instalar SQL Server Express para Olcas"; 
+		Action = { Install-SQLServerAndCreateUser } }
+    "14" = @{
+        Description = "Configurar e instalar Olcas"
+        Action = { Invoke-OlcasInstallStep }
+    }
+    "15" = @{
+        Description = "Copiar ServicesWindows para C:\"
+        Action = { Invoke-ServicesWindowsCopyStep }
+    }
+	"16" = @{ 
 		Description = "Copiar soluções para releases"; 
 		Action = { Copy-Services-Folders } }
-    "16" = @{ 
+    "17" = @{ 
 		Description = "Criar serviços Windows para APIs"; 
 		Action = { Create-Services } }
-    "17" = @{ 
+    "18" = @{ 
 		Description = "Instalar Devices API como Windows Service"; 
 		Action = { Istall-Devices-Service } }
     "19" = @{ 
