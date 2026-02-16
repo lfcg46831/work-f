@@ -425,12 +425,6 @@ function Invoke-JdkInstallStep {
 
 # Function to install Epson JavaPOS
 function Install-EpsonJavaPOS {
-    $isEpsonEnabled = Test-IsPeripheralEnabled -InstallerName "epson-printer"
-    if (-not $isEpsonEnabled) {
-        Write-Output "Epson peripheral is disabled in profile. Skipping Epson installation and DLL copy."
-        return
-    }
-
     $isInstalled = $false
     if (Test-Path -Path $epsonRegistryKey) {
         $installedDisplayName = (Get-ItemProperty -Path $epsonRegistryKey -Name DisplayName -ErrorAction SilentlyContinue).DisplayName
