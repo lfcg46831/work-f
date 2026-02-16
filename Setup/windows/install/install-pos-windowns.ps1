@@ -1016,7 +1016,7 @@ function Start-TotalCheckoutPOSServices {
 }
 
 function Install-SQLServerAndCreateUser {
-    $installerPath = "C:\TotalCheckout\PackagePOS\SQL2019-SSEI-Expr.exe"
+    $installerPath = Join-Path -Path $toolsFolder -ChildPath "SQL2019-SSEI-Expr.exe"
     $saPassword = "olc"  # Password for the 'sa' user
     $newUsername = "olc" # New user name to be created
     $newPassword = "olc" # Password for the new user
