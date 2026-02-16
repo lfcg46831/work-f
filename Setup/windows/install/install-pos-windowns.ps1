@@ -644,10 +644,10 @@ function Copy-NginxFolder {
     # Check if the source folder exists
     if (Test-Path -Path $sourceFolderForNginx) {
         # Copy the folder to the destination
-        Copy-Item -Path $sourceFolderForNginx -Destination $destinationFolderForNginx -Recurse -Force
+        Copy-Item -Path $sourceFolderForNginx -Destination $destinationFolderForNginx -Recurse -Force -ErrorAction Stop
         Write-Output "Folder successfully copied to: $destinationFolderForNginx"
     } else {
-        Write-Output "Source folder not found: $sourceFolderForNginx"
+        throw "Source folder not found: $sourceFolderForNginx. Aborting script execution."
     }
 }
 
