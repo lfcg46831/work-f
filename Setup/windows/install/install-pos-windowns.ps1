@@ -68,11 +68,6 @@ $currentPath = [System.Environment]::GetEnvironmentVariable('Path', [System.Envi
 # Define the folder path
 $folderPath = "C:\TotalCheckout\Database"
 
-# Define the source and destination paths for jpos.xml
-$sourceFileForJpos = "C:\TotalCheckout\PackagePOS\jpos.xml"
-$destinationFolder = "C:\TotalCheckout"
-$jposDestinationFile = Join-Path -Path $destinationFolder -ChildPath "jpos.xml"
-
 # Define the source and destination paths for nginx
 $sourceFolderForNginx = "C:\TotalCheckout\PackagePOS\nginx"
 $destinationFolderForNginx = "C:\nginx"
@@ -188,10 +183,6 @@ function Apply-PosProfile {
 	if ($null -eq $Profile) { throw "POS profile is null. Ensure -ProfilePath is provided and the JSON file exists and is valid." }
 	if ($null -eq $Profile.paths) { throw "Profile is missing 'paths' node." }
 	if ($null -eq $Profile.environment) { throw "Profile is missing 'environment' node." }
-
-    $global:sourceFileForJpos = Get-ProfileValue -Node $Profile.paths -PropertyName "jposSource" -DefaultValue $global:sourceFileForJpos
-    $global:destinationFolder = Get-ProfileValue -Node $Profile.paths -PropertyName "jposDestinationFolder" -DefaultValue $global:destinationFolder
-    $global:jposDestinationFile = Join-Path -Path $global:destinationFolder -ChildPath "jpos.xml"
 
     $global:sourceFolderForNginx = Get-ProfileValue -Node $Profile.paths -PropertyName "nginxSource" -DefaultValue $global:sourceFolderForNginx
     $global:destinationFolderForNginx = Get-ProfileValue -Node $Profile.paths -PropertyName "nginxDestination" -DefaultValue $global:destinationFolderForNginx
@@ -680,17 +671,6 @@ function Create-TotalCheckoutDatabaseFolder {
         Write-Output "Folder created successfully: $folderPath"
     } else {
         Write-Output "Folder already exists: $folderPath"
-    }
-}
-
-function Copy-JPOSXmlFile {
-    # Check if the source file exists
-    if (Test-Path -Path $sourceFileForJpos) {
-        # Copy the file to the destination
-        Copy-Item -Path $sourceFileForJpos -Destination $destinationFolder -Force -ErrorAction Stop
-        Write-Output "File successfully copied to: $jposDestinationFile"
-    } else {
-        throw "Source file not found: $sourceFileForJpos. Aborting script execution."
     }
 }
 
@@ -1523,9 +1503,6 @@ $stepDefinitions = [ordered]@{
     "6" = @{ 
 		Description = "Criar pasta C:\TotalCheckout\Database"; 
 		Action = { Create-TotalCheckoutDatabaseFolder } }
-    "7" = @{ 
-		Description = "Copiar jpos.xml"; 
-		Action = { Copy-JPOSXmlFile } }
     "8" = @{ 
 		Description = "Copiar pasta nginx"; 
 		Action = { Copy-NginxFolder } }
