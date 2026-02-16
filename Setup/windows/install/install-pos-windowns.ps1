@@ -1334,7 +1334,6 @@ function Install-IaaS-Service {
     Write-Output "Service '$IaaSServiceName' installed and started."
 }
 
-
 function Resolve-SelectedInstallSteps {
     param (
         [string[]]$RequestedSteps,
@@ -1477,35 +1476,35 @@ $stepDefinitions = [ordered]@{
 		Description = "Download e instalação de FFmpeg"; 
 		Action = { Download-And-Setup-FFmpeg } }
     "10" = @{ 
-		Description = "Copiar soluções para releases"; 
-		Action = { Copy-Services-Folders } }
-    "11" = @{ 
-		Description = "Criar serviços Windows para APIs"; 
-		Action = { Create-Services } }
-    "12" = @{ 
-		Description = "Instalar Devices API como Windows Service"; 
-		Action = { Istall-Devices-Service } }
-    "13" = @{ 
-		Description = "Iniciar serviços Windows do TotalCheckoutPOS"; 
-		Action = { Start-TotalCheckoutPOSServices } }
-    "14" = @{ 
 		Description = "Instalar IaaS.exe como Windows Service"; 
 		Action = { Install-IaaS-Service } }
-    "15" = @{ 
+    "11" = @{ 
 		Description = "Instalar SQL Server Express para Olcas"; 
 		Action = { Install-SQLServerAndCreateUser } }
-    "16" = @{
+    "12" = @{
         Description = "Configurar e instalar Olcas"
         Action = { Invoke-OlcasInstallStep }
     }
-    "17" = @{
+    "13" = @{
         Description = "Copiar ServicesWindows para C:\"
         Action = { Invoke-ServicesWindowsCopyStep }
     }
-    "18" = @{
+    "14" = @{
         Description = "Instalar .NET Framework 3.5"
         Action = { Invoke-DotNetFrameworkInstallStep }
     }
+	"15" = @{ 
+		Description = "Copiar soluções para releases"; 
+		Action = { Copy-Services-Folders } }
+    "16" = @{ 
+		Description = "Criar serviços Windows para APIs"; 
+		Action = { Create-Services } }
+    "17" = @{ 
+		Description = "Instalar Devices API como Windows Service"; 
+		Action = { Istall-Devices-Service } }
+    "19" = @{ 
+		Description = "Iniciar serviços Windows do TotalCheckoutPOS"; 
+		Action = { Start-TotalCheckoutPOSServices } }
 }
 
 $availableSteps = @($stepDefinitions.Keys)
