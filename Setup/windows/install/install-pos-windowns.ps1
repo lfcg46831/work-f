@@ -454,14 +454,31 @@ function Install-EpsonJavaPOS {
 }
 
 # Function to install Datalogic JavaPOS
-function Install-DatalogicJavaPOS {
+function Test-DatalogicJavaPOSInstalled {
+    $isInstalled = $false
 
     if (Test-Path -Path $datalogicRegistryKey) {
         $installedDisplayName = (Get-ItemProperty -Path $datalogicRegistryKey -Name DisplayName -ErrorAction SilentlyContinue).DisplayName
         if ($installedDisplayName -eq $datalogicDisplayNameValue) {
-            Write-Output "Datalogic JavaPOS is already installed. Skipping installation."
-            return
+            $isInstalled = $true
         }
+    }
+
+    if (-not $isInstalled) {
+        $datalogicBasePath = Split-Path -Path $javaPOSNewPath -Parent
+        if ((Test-Path -Path $datalogicBasePath) -or (Test-Path -Path $javaPOSNewPath)) {
+            $isInstalled = $true
+        }
+    }
+
+    return $isInstalled
+}
+
+function Install-DatalogicJavaPOS {
+
+    if (Test-DatalogicJavaPOSInstalled) {
+        Write-Output "Datalogic JavaPOS is already installed. Skipping installation."
+        return
     }
 
     if (-not (Test-Path -Path $datalogicInstallerPath)) {
@@ -483,7 +500,7 @@ function Install-DatalogicJavaPOS {
     $proc = Start-Process -FilePath $javaPath -ArgumentList $argsSilent -Wait -PassThru -NoNewWindow
     Write-Output "Datalogic installer exit code (silent): $($proc.ExitCode)"
 
-    if ($proc.ExitCode -eq 0) {
+    if (($proc.ExitCode -eq 0) -and (Test-DatalogicJavaPOSInstalled)) {
         Write-Output "Datalogic JavaPOS installation completed successfully (silent)."
         Add-JavaPOSPath
         return
@@ -498,6 +515,10 @@ function Install-DatalogicJavaPOS {
 
     if ($proc2.ExitCode -ne 0) {
         throw "Datalogic JavaPOS installation failed. ExitCode silent=$($proc.ExitCode), normal=$($proc2.ExitCode). Check installer output."
+    }
+
+    if (-not (Test-DatalogicJavaPOSInstalled)) {
+        throw "Datalogic JavaPOS installation did not complete. The installer finished without installing the package (it may have been cancelled)."
     }
 
     Write-Output "Datalogic JavaPOS installation completed successfully."
