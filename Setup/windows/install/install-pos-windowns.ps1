@@ -83,7 +83,7 @@ $destinationFolderForNssm = "C:\nssm"
 
 # Define the URL for the FFmpeg build and local download path
 $ffmpegUrl = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
-$downloadPathFFmpeg = "C:\Temp\ffmpeg-release-essentials.zip"
+$downloadPathFFmpeg = "$downloadFolder\ffmpeg-release-essentials.zip"
 $extractPathFFmpeg = "C:\ffmpeg"
 
 # Define the service name to create the services
@@ -674,19 +674,22 @@ function Copy-NssmFolder {
 }
 
 function Download-And-Setup-FFmpeg {
-    # Create a temporary directory for the download if it doesn't exist
-    $tempDir = "C:\Temp"
-    if (-Not (Test-Path -Path $tempDir)) {
-        New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+    # Ensure the install folder exists before using it for download/extraction
+    if (-Not (Test-Path -Path $downloadFolder)) {
+        New-Item -ItemType Directory -Path $downloadFolder -Force | Out-Null
     }
 
-    # Download the FFmpeg zip file
-    Write-Output "Downloading FFmpeg from $ffmpegUrl..."
-    Invoke-WebRequest -Uri $ffmpegUrl -OutFile $downloadPathFFmpeg
-    Write-Output "Download complete: $downloadPathFFmpeg"
+    # Download the FFmpeg zip file only if it doesn't already exist
+    if (Test-Path -Path $downloadPathFFmpeg) {
+        Write-Output "FFmpeg package already exists: $downloadPathFFmpeg"
+    } else {
+        Write-Output "Downloading FFmpeg from $ffmpegUrl..."
+        Invoke-WebRequest -Uri $ffmpegUrl -OutFile $downloadPathFFmpeg
+        Write-Output "Download complete: $downloadPathFFmpeg"
+    }
 
-    # Extract the zip file to a temporary location
-    $tempExtractPath = Join-Path -Path $tempDir -ChildPath "ffmpeg-temp"
+    # Extract the zip file to a temporary location inside install-pos
+    $tempExtractPath = Join-Path -Path $downloadFolder -ChildPath "ffmpeg-temp"
     if (Test-Path -Path $tempExtractPath) {
         Remove-Item -Path $tempExtractPath -Recurse -Force
     }
@@ -724,10 +727,9 @@ function Download-And-Setup-FFmpeg {
     # Update current session's Path variable
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path", [System.EnvironmentVariableTarget]::Machine)
 
-    # Clean up temporary files
-    Remove-Item -Path $downloadPathFFmpeg -Force
+    # Clean up temporary extraction files
     Remove-Item -Path $tempExtractPath -Recurse -Force
-    Write-Output "Temporary files cleaned up."
+    Write-Output "Temporary extraction files cleaned up."
 
     Write-Output "FFmpeg setup complete! You can now use FFmpeg from any command line."
 }
