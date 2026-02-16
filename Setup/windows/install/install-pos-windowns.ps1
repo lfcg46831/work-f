@@ -666,10 +666,10 @@ function Copy-NssmFolder {
     # Check if the source folder exists
     if (Test-Path -Path $sourceFolderForNssm) {
         # Copy the folder to the destination
-        Copy-Item -Path $sourceFolderForNssm -Destination $destinationFolderForNssm -Recurse -Force
+        Copy-Item -Path $sourceFolderForNssm -Destination $destinationFolderForNssm -Recurse -Force -ErrorAction Stop
         Write-Output "Folder successfully copied to: $destinationFolderForNssm"
     } else {
-        Write-Output "Source folder not found: $sourceFolderForNssm"
+        throw "Source folder not found: $sourceFolderForNssm. Aborting script execution."
     }
 }
 
