@@ -9,6 +9,7 @@ $ErrorActionPreference = "Stop"
 # Define paths and variables
 $downloadPath = "C:\TotalCheckout"
 $downloadFolder = "$downloadPath\PackagePOS\runtimes"
+$toolsFolder = "$downloadPath\PackagePOS\tools"
 $logFile = "$downloadFolder\install-log.txt"
 
 # .NET SDK Variables
@@ -82,7 +83,7 @@ $destinationFolderForNssm = "C:\nssm"
 
 # Define the URL for the FFmpeg build and local download path
 $ffmpegUrl = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
-$downloadPathFFmpeg = "$downloadFolder\ffmpeg-release-essentials.zip"
+$downloadPathFFmpeg = "$toolsFolder\ffmpeg-release-essentials.zip"
 $extractPathFFmpeg = "C:\ffmpeg"
 
 # Define the service name to create the services
@@ -708,9 +709,9 @@ function Copy-NssmFolder {
 }
 
 function Download-And-Setup-FFmpeg {
-    # Ensure the install folder exists before using it for download/extraction
-    if (-Not (Test-Path -Path $downloadFolder)) {
-        New-Item -ItemType Directory -Path $downloadFolder -Force | Out-Null
+    # Ensure the tools folder exists before using it for download/extraction
+    if (-Not (Test-Path -Path $toolsFolder)) {
+        New-Item -ItemType Directory -Path $toolsFolder -Force | Out-Null
     }
 
     # Download the FFmpeg zip file only if it doesn't already exist
@@ -722,8 +723,8 @@ function Download-And-Setup-FFmpeg {
         Write-Output "Download complete: $downloadPathFFmpeg"
     }
 
-    # Extract the zip file to a temporary location inside PackagePOS\runtimes
-    $tempExtractPath = Join-Path -Path $downloadFolder -ChildPath "ffmpeg-temp"
+    # Extract the zip file to a temporary location inside PackagePOS\tools
+    $tempExtractPath = Join-Path -Path $toolsFolder -ChildPath "ffmpeg-temp"
     if (Test-Path -Path $tempExtractPath) {
         Remove-Item -Path $tempExtractPath -Recurse -Force
     }
