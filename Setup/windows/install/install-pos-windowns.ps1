@@ -81,21 +81,6 @@ $destinationFolderForNwjs = "C:\nwjs"
 $sourceFolderForNssm = "C:\TotalCheckout\PackagePOS\nssm"
 $destinationFolderForNssm = "C:\nssm"
 
-# Define the source and destination paths to Copy UtilsFiles
-$sourceFolderUtils = "C:\TotalCheckout\PackagePOS\Utils"
-$destinationFolderForUtils = "C:\Releases\TotalCheckoutPOS.Devices"
-
-# List of files to copy for UtilsFiles
-$utilsFilesToCopy = @(
-    "brand.properties",
-    "dls.properties",
-    "ECIEncoding.csv",
-    "IHSParser.csv",
-    "LabelIdentifiers.csv",
-    "log4j2.xml",
-    "Devices-all.jar"
-)
-
 # Define the URL for the FFmpeg build and local download path
 $ffmpegUrl = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 $downloadPathFFmpeg = "C:\Temp\ffmpeg-release-essentials.zip"
@@ -686,33 +671,6 @@ function Copy-NssmFolder {
     } else {
         Write-Output "Source folder not found: $sourceFolderForNssm"
     }
-}
-
-function Copy-UtilsFiles {
-    # Create the destination folder if it doesn't exist
-    if (-Not (Test-Path -Path $destinationFolderForUtils)) {
-        New-Item -ItemType Directory -Path $destinationFolderForUtils -Force | Out-Null
-        Write-Output "Destination folder created: $destinationFolderForUtils"
-    }
-
-    # Loop through each file and copy if it doesn't already exist in the destination
-    foreach ($file in $utilsFilesToCopy) {
-        $sourceFile = Join-Path -Path $sourceFolderUtils -ChildPath $file
-        $destinationFile = Join-Path -Path $destinationFolderForUtils -ChildPath $file
-
-        if (Test-Path -Path $sourceFile) {
-            if (-Not (Test-Path -Path $destinationFile)) {
-                Copy-Item -Path $sourceFile -Destination $destinationFile -Force
-                Write-Output "File copied: $file"
-            } else {
-                Write-Output "File already exists, skipping: $file"
-            }
-        } else {
-            throw "Source file not found: $sourceFile"
-        }
-    }
-
-    Write-Output "Finished copying files!"
 }
 
 function Download-And-Setup-FFmpeg {
@@ -1498,9 +1456,6 @@ $stepDefinitions = [ordered]@{
         Description = "Instalar periféricos do perfil POS"
         Action = { Invoke-PeripheralInstallStep -Profile $PosProfile }
     }
-    "4" = @{ 
-		Description = "Copiar ficheiros Utils"; 
-		Action = { Copy-UtilsFiles } }
     "5" = @{ 
 		Description = "Criar pasta C:\TotalCheckout\Database"; 
 		Action = { Create-TotalCheckoutDatabaseFolder } }
