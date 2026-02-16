@@ -29,26 +29,26 @@ $vcRedist86InstallerPath = "C:\TotalCheckout\PackagePOS\VC_redist.x86.exe"
 $vcRedist64InstallerPath = "C:\TotalCheckout\PackagePOS\VC_redist.x64.exe"
 
 # Define the paths for Epson JavaPOS
-$epsonInstallFolder = "C:\TotalCheckout\PackagePOS\Epson_JavaPOS_ADK_11429"
+$epsonInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\Epson_JavaPOS_ADK_11429"
 $epsonInstallerName = "EPSON_JavaPOS_1.14.29.exe"
 $epsonInstallerPath = Join-Path -Path $epsonInstallFolder -ChildPath $epsonInstallerName
 $epsonRegistryKey = "HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Installer\Dependencies\{855D735A-B51F-446C-A4C5-73676BD59463}"
 $epsonDisplayNameValue = "Epson JavaPOS ADK 1.14.29"
 
 # Define the paths for Datalogic JavaPOS
-$datalogicInstallFolder = "C:\TotalCheckout\PackagePOS\Datalogic\610008819"
+$datalogicInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\Datalogic\610008819"
 $datalogicInstallerName = "JavaPOS_Setup.jar"
 $datalogicInstallerPath = Join-Path -Path $datalogicInstallFolder -ChildPath $datalogicInstallerName
 $datalogicRegistryKey = "HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Installer\Dependencies\{DATALOGIC-JAVAPOS}"
 $datalogicDisplayNameValue = "Datalogic JavaPOS"
 
 # Define the paths for Citizen JavaPOS
-$citizenInstallFolder = "C:\TotalCheckout\PackagePOS\Citizen\JavaPOS_V1.14.0.5E"
+$citizenInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\Citizen\JavaPOS_V1.14.0.5E"
 $citizenInstallerName = "CSJ_JPOS11405_setup64EN.exe"
 $citizenInstallerPath = Join-Path -Path $citizenInstallFolder -ChildPath $citizenInstallerName
 
 # Define the paths for HP Cash Drawer Driver
-$hpCashDrawerInstallFolder = "C:\TotalCheckout\PackagePOS\HP"
+$hpCashDrawerInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\HP"
 $hpCashDrawerInstallerName = "sp142606.exe"
 $hpCashDrawerInstallerPath = Join-Path -Path $hpCashDrawerInstallFolder -ChildPath $hpCashDrawerInstallerName
 
