@@ -933,7 +933,7 @@ Write-Host "Nginx service '$serviceName' installed and started successfully."
 }
 
 # Install devices_service
-function Istall-Devices-Service {
+function Install-Devices-Service {
 # Define variables
 $SERVICE_NAME = "TotalCheckoutPOS.Devices"
 $WORKING_DIR = "C:\Releases\TotalCheckoutPOS.Devices"
@@ -1560,7 +1560,7 @@ $stepDefinitions = [ordered]@{
 		Action = { Create-Services } }
     "18" = @{ 
 		Description = "Instalar Devices API como Windows Service"; 
-		Action = { Istall-Devices-Service } }
+		Action = { Install-Devices-Service } }
     "19" = @{ 
 		Description = "Iniciar serviços Windows do TotalCheckoutPOS"; 
 		Action = { Start-TotalCheckoutPOSServices } }
