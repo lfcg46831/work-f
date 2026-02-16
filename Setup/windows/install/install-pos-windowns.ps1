@@ -25,8 +25,8 @@ $jdkLogFile = "$downloadFolder\jdk-install.log"
 $jdkInstallerUrl = "https://download.oracle.com/java/17/archive/jdk-17.0.11_windows-x64_bin.exe"
 
 # Microsoft Visual C++ Redistributable
-$vcRedist86InstallerPath = "C:\TotalCheckout\PackagePOS\VC_redist.x86.exe"
-$vcRedist64InstallerPath = "C:\TotalCheckout\PackagePOS\VC_redist.x64.exe"
+$vcRedist86InstallerPath = "C:\TotalCheckout\PackagePOS\redistributables\VC_redist.x86.exe"
+$vcRedist64InstallerPath = "C:\TotalCheckout\PackagePOS\redistributables\VC_redist.x64.exe"
 
 # Define the paths for Epson JavaPOS
 $epsonInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\Epson_JavaPOS_ADK_11429"
