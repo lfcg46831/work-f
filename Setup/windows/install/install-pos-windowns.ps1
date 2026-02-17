@@ -1377,8 +1377,7 @@ Function Install-DotNetFramework {
 
     # Check if the script is running as Administrator
     If (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-        Write-Output "This script must be run as Administrator!"
-        Return
+        throw "This script must be run as Administrator!"
     }
 
     # Check if .NET Framework 3.5 is already installed (via Registry)
@@ -1392,23 +1391,25 @@ Function Install-DotNetFramework {
     # Try to install using DISM if the setup file isn't available
     If (-Not (Test-Path -Path $SetupPath)) {
         Write-Output "The setup file does not exist at $SetupPath. Attempting to install via DISM..."
-        Try {
-            DISM /Online /Enable-Feature /FeatureName:NetFx3 /All /Quiet /NoRestart
-            Write-Output ".NET Framework 3.5 installation via DISM completed successfully."
-        } Catch {
-            Write-Output "An error occurred during the installation via DISM: $_"
+
+        DISM /Online /Enable-Feature /FeatureName:NetFx3 /All /Quiet /NoRestart | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install .NET Framework 3.5 via DISM. Exit code: $LASTEXITCODE"
         }
+
+        Write-Output ".NET Framework 3.5 installation via DISM completed successfully."
         Return
     }
 
     # Install .NET Framework 3.5 using the setup file
     Write-Output "Starting the installation of .NET Framework 3.5 using the setup file..."
-    Try {
-        Start-Process -FilePath $SetupPath -ArgumentList "/quiet /norestart" -Wait -NoNewWindow
-        Write-Output ".NET Framework 3.5 installation using setup file completed successfully."
-    } Catch {
-        Write-Output "An error occurred during the installation: $_"
+
+    $installerProcess = Start-Process -FilePath $SetupPath -ArgumentList "/quiet /norestart" -Wait -NoNewWindow -PassThru
+    if ($installerProcess.ExitCode -ne 0) {
+        throw "Failed to install .NET Framework 3.5 using setup file. Exit code: $($installerProcess.ExitCode)"
     }
+
+    Write-Output ".NET Framework 3.5 installation using setup file completed successfully."
 }
 
 function Invoke-DotNetFrameworkInstallStep {
