@@ -112,8 +112,8 @@ $IaaSWorkingDir = "C:\POS_Main"
 $IaaSPort = "10000"
 $IaaSConfigPath = "C:\POS_MAIN\Configuration.dat"
 $IngelinkSourceFiles = @(
-    "C:\TotalCheckout\PackagePOS\payments\Ingelink\Configuration.dat",
-    "C:\TotalCheckout\PackagePOS\payments\Ingelink\RPConfig.dat"
+    "C:\TotalCheckout\PackagePOS\payments\IngelinkP\Configuration.dat",
+    "C:\TotalCheckout\PackagePOS\payments\IngelinkP\RPConfig.dat"
 )
 $IngelinkPZipPath = "C:\TotalCheckout\PackagePOS\payments\IngelinkP\IngelinkP.Fujitsu.10.0.0.13-Windows.zip"
 $IngelinkPDestination = "C:\POS_MAIN"
@@ -1277,13 +1277,18 @@ function Invoke-PaymentInstallPlan {
     param(
         $Profile
     )
-
-    if ($null -eq $Profile -or -not ($Profile.PSObject.Properties.Name -contains "payments")) {
-        Write-Output "No payments section found in profile. Payment install plan will not run."
+	
+	if ($null -eq $Profile) {
+        Write-Output "No profile loaded. Install plan will not run."
         return
     }
+	
+	Write-Host "Invoke-PaymentInstallPlan CALLED"
+	Write-Host "Payments count: $(@($Profile.payments).Count)"
+	Write-Host ("Payments: " + ($Profile.payments | ConvertTo-Json -Depth 5))
 
-    foreach ($payment in @($Profile.payments)) {
+	$payments = @($Profile.payments)
+    foreach ($payment in @($payments)) {
         if (-Not (Get-ProfileValue -Node $payment -PropertyName "enabled" -DefaultValue $true)) {
             $name = Get-ProfileValue -Node $payment -PropertyName "name" -DefaultValue "unknown"
             Write-Output "Skipping payment '$name' because it is disabled in profile."
