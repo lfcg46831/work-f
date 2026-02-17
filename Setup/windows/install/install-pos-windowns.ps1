@@ -18,7 +18,8 @@ $dotnetSDK86InstallerUrl = "https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.4
 $dotnetSDK64InstallerUrl = "https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.401/dotnet-sdk-8.0.401-win-x64.exe"
 $dotnetSDK86InstallerFile = "$downloadFolder\dotnet-sdk-$dotnetSDKVersion-win-x86.exe"
 $dotnetSDK64InstallerFile = "$downloadFolder\dotnet-sdk-$dotnetSDKVersion-win-x64.exe"
-$dotnetSDKPath = "C:\Program Files\dotnet\sdk\$dotnetSDKVersion"
+$dotnetSDK86Path = "C:\Program Files (x86)\dotnet\sdk\$dotnetSDKVersion"
+$dotnetSDK64Path = "C:\Program Files\dotnet\sdk\$dotnetSDKVersion"
 
 # JDK Variables
 $jdkVersion = "17.0.11"
@@ -334,7 +335,7 @@ function Install-DotnetSDK {
 }
 
 function Invoke-DotnetSdk86InstallStep {
-    $dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDK86InstallerUrl -installerFile $dotnetSDK86InstallerFile -testPath $dotnetSDKPath
+    $dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDK86InstallerUrl -installerFile $dotnetSDK86InstallerFile -testPath $dotnetSDK86Path
     if ($dotnetInstallSuccess) {
         Write-Host ".NET SDK x86 installation completed successfully!"
     }
@@ -345,7 +346,7 @@ function Invoke-DotnetSdk86InstallStep {
 }
 
 function Invoke-DotnetSdk64InstallStep {
-    $dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDK64InstallerUrl -installerFile $dotnetSDK64InstallerFile -testPath $dotnetSDKPath
+    $dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDK64InstallerUrl -installerFile $dotnetSDK64InstallerFile -testPath $dotnetSDK64Path
     if ($dotnetInstallSuccess) {
         Write-Host ".NET SDK x64 installation completed successfully!"
     }
