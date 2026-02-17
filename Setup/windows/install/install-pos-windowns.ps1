@@ -14,8 +14,10 @@ $logFile = "$downloadFolder\install-log.txt"
 
 # .NET SDK Variables
 $dotnetSDKVersion = "8.0.401"
-$dotnetSDKInstallerUrl = "https://download.visualstudio.microsoft.com/download/pr/f5f1c28d-7bc9-431e-98da-3e2c1bbd1228/864e152e374b5c9ca6d58ee953c5a6ed/dotnet-sdk-8.0.401-win-x64.exe"
-$dotnetSDKInstallerFile = "$downloadFolder\dotnet-sdk-$dotnetSDKVersion-win-x64.exe"
+$dotnetSDK86InstallerUrl = "https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.401/dotnet-sdk-8.0.401-win-x86.exe"
+$dotnetSDK64InstallerUrl = "https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.401/dotnet-sdk-8.0.401-win-x64.exe"
+$dotnetSDK86InstallerFile = "$downloadFolder\dotnet-sdk-$dotnetSDKVersion-win-x86.exe"
+$dotnetSDK64InstallerFile = "$downloadFolder\dotnet-sdk-$dotnetSDKVersion-win-x64.exe"
 $dotnetSDKPath = "C:\Program Files\dotnet\sdk\$dotnetSDKVersion"
 
 # JDK Variables
@@ -330,15 +332,31 @@ function Install-DotnetSDK {
     }
 }
 
-function Invoke-DotnetSdkInstallStep {
-    $dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDKInstallerUrl -installerFile $dotnetSDKInstallerFile -testPath $dotnetSDKPath
+function Invoke-DotnetSdk86InstallStep {
+    $dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDK86InstallerUrl -installerFile $dotnetSDK86InstallerFile -testPath $dotnetSDKPath
     if ($dotnetInstallSuccess) {
-        Write-Host ".NET SDK installation completed successfully!"
+        Write-Host ".NET SDK x86 installation completed successfully!"
     }
     else {
-        Write-Host ".NET SDK installation failed. Please check the log file for more details."
+        Write-Host ".NET SDK x86 installation failed. Please check the log file for more details."
         exit 1
     }
+}
+
+function Invoke-DotnetSdk64InstallStep {
+    $dotnetInstallSuccess = Install-DotnetSDK -version $dotnetSDKVersion -installerUrl $dotnetSDK64InstallerUrl -installerFile $dotnetSDK64InstallerFile -testPath $dotnetSDKPath
+    if ($dotnetInstallSuccess) {
+        Write-Host ".NET SDK x64 installation completed successfully!"
+    }
+    else {
+        Write-Host ".NET SDK x64 installation failed. Please check the log file for more details."
+        exit 1
+    }
+}
+
+function Invoke-DotnetSdkInstallStep {
+	Invoke-DotnetSdk86InstallStep
+	Invoke-DotnetSdk64InstallStep
 }
 
 # Function to install the JDK
