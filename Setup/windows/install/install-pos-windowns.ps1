@@ -1239,6 +1239,9 @@ function Install-IngelinkPPayment {
     Write-Output "Extracting IngelinkP package from '$IngelinkPZipPath' to '$IngelinkPDestination'..."
     Expand-Archive -Path $IngelinkPZipPath -DestinationPath $IngelinkPDestination -Force
     Write-Output "IngelinkP package extracted successfully."
+
+    Write-Output "Installing IaaS service at the end of the IngelinkP installation step..."
+    Install-IaaS-Service
 }
 
 function Invoke-PaymentInstallPlan {
@@ -1591,9 +1594,6 @@ $stepDefinitions = [ordered]@{
     "11" = @{ 
 		Description = "Download e instalação de FFmpeg"; 
 		Action = { Download-And-Setup-FFmpeg } }
-    "12" = @{ 
-		Description = "Instalar IaaS.exe como Windows Service"; 
-		Action = { Install-IaaS-Service } }
     "13" = @{
         Description = "Copiar ServicesWindows para C:\"
         Action = { Invoke-ServicesWindowsCopyStep }
