@@ -1412,7 +1412,7 @@ Function Install-DotNetFramework {
 }
 
 function Invoke-DotNetFrameworkInstallStep {
-    $setupPath = "C:\TotalCheckout\PackagePOS\dotNetFx35setup.exe"
+    $setupPath = "C:\TotalCheckout\PackagePOS\runtimes\dotNetFx35setup.exe"
     Install-DotNetFramework -SetupPath $setupPath
 }
 
