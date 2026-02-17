@@ -115,7 +115,7 @@ $IngelinkSourceFiles = @(
     "C:\TotalCheckout\PackagePOS\payments\Ingelink\Configuration.dat",
     "C:\TotalCheckout\PackagePOS\payments\Ingelink\RPConfig.dat"
 )
-$IngelinkPZipPath = "C:\Code\TotalCheckoutPOS\TotalCheckoutPOS.Setup\windows\install\TotalCheckout\PackagePOS\payments\IngelinkP\IngelinkP.Fujitsu.10.0.0.13-Windows.zip"
+$IngelinkPZipPath = "C:\TotalCheckout\PackagePOS\payments\IngelinkP\IngelinkP.Fujitsu.10.0.0.13-Windows.zip"
 $IngelinkPDestination = "C:\POS_MAIN"
 $POSMainDestination = "C:\POS_MAIN"
 $NSSM_PATH = "C:\nssm\win64\nssm.exe"
