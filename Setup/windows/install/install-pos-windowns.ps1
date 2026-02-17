@@ -117,6 +117,7 @@ $IngelinkSourceFiles = @(
 )
 $IngelinkPZipPath = "C:\TotalCheckout\PackagePOS\payments\IngelinkP\IngelinkP.Fujitsu.10.0.0.13-Windows.zip"
 $IngelinkPDestination = "C:\POS_MAIN"
+$IngelinkPDriverInstallerPath = "C:\TotalCheckout\PackagePOS\payments\IngelinkP\IngenicoUSBDrivers_3.38_W10_setup_SIGNED.exe"
 $POSMainDestination = "C:\POS_MAIN"
 $NSSM_PATH = "C:\nssm\win64\nssm.exe"
 
@@ -1228,6 +1229,34 @@ function Invoke-PeripheralInstallStep {
 }
 
 function Install-IngelinkPPayment {
+    if (-not (Test-Path -Path $IngelinkPDriverInstallerPath)) {
+        throw "IngelinkP driver installer not found at '$IngelinkPDriverInstallerPath'."
+    }
+
+    Write-Output "Installing IngelinkP USB driver silently from '$IngelinkPDriverInstallerPath'..."
+
+    $silentArgsCandidates = @(
+        @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-'),
+        @('/S'),
+        @('/silent'),
+        @('/quiet')
+    )
+
+    $driverInstalled = $false
+    foreach ($driverArgs in $silentArgsCandidates) {
+        $process = Start-Process -FilePath $IngelinkPDriverInstallerPath -ArgumentList $driverArgs -Wait -PassThru
+        Write-Output "IngelinkP driver installer exit code with args '$($driverArgs -join ' ')': $($process.ExitCode)"
+
+        if ($process.ExitCode -eq 0) {
+            $driverInstalled = $true
+            break
+        }
+    }
+
+    if (-not $driverInstalled) {
+        throw "Failed to install IngelinkP USB driver in silent mode."
+    }
+
     if (-not (Test-Path -Path $IngelinkPZipPath)) {
         throw "IngelinkP package not found at '$IngelinkPZipPath'."
     }
