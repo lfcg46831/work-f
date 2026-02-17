@@ -23,6 +23,13 @@
       "enabled": true
     }
   ],
+  "payments": [
+    {
+      "name": "ingelinkp",
+      "installer": "ingelinkp",
+      "enabled": true
+    }
+  ],
   "environment": {
     "releaseMode": "Dev",
     "variables": {
