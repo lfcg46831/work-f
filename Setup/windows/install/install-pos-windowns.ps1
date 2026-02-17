@@ -115,6 +115,8 @@ $IngelinkSourceFiles = @(
     "C:\TotalCheckout\PackagePOS\payments\Ingelink\Configuration.dat",
     "C:\TotalCheckout\PackagePOS\payments\Ingelink\RPConfig.dat"
 )
+$IngelinkPZipPath = "C:\Code\TotalCheckoutPOS\TotalCheckoutPOS.Setup\windows\install\TotalCheckout\PackagePOS\payments\IngelinkP\IngelinkP.Fujitsu.10.0.0.13-Windows.zip"
+$IngelinkPDestination = "C:\POS_MAIN"
 $POSMainDestination = "C:\POS_MAIN"
 $NSSM_PATH = "C:\nssm\win64\nssm.exe"
 
@@ -1225,6 +1227,62 @@ function Invoke-PeripheralInstallStep {
     Invoke-PeripheralInstallPlan -Profile $Profile
 }
 
+function Install-IngelinkPPayment {
+    if (-not (Test-Path -Path $IngelinkPZipPath)) {
+        throw "IngelinkP package not found at '$IngelinkPZipPath'."
+    }
+
+    if (-not (Test-Path -Path $IngelinkPDestination)) {
+        New-Item -ItemType Directory -Path $IngelinkPDestination -Force | Out-Null
+    }
+
+    Write-Output "Extracting IngelinkP package from '$IngelinkPZipPath' to '$IngelinkPDestination'..."
+    Expand-Archive -Path $IngelinkPZipPath -DestinationPath $IngelinkPDestination -Force
+    Write-Output "IngelinkP package extracted successfully."
+}
+
+function Invoke-PaymentInstallPlan {
+    param(
+        $Profile
+    )
+
+    if ($null -eq $Profile -or -not ($Profile.PSObject.Properties.Name -contains "payments")) {
+        Write-Output "No payments section found in profile. Payment install plan will not run."
+        return
+    }
+
+    foreach ($payment in @($Profile.payments)) {
+        if (-Not (Get-ProfileValue -Node $payment -PropertyName "enabled" -DefaultValue $true)) {
+            $name = Get-ProfileValue -Node $payment -PropertyName "name" -DefaultValue "unknown"
+            Write-Output "Skipping payment '$name' because it is disabled in profile."
+            continue
+        }
+
+        $name = Get-ProfileValue -Node $payment -PropertyName "name" -DefaultValue "unknown"
+        $installer = (Get-ProfileValue -Node $payment -PropertyName "installer" -DefaultValue "").ToLowerInvariant()
+
+        Write-Output "Executing payment step for '$name' using installer '$installer'."
+
+        switch ($installer) {
+            "ingelinkp" { Install-IngelinkPPayment; break }
+            default { Write-Warning "No installer mapped for payment '$name' (installer='$installer'). Skipping." }
+        }
+    }
+}
+
+function Invoke-PaymentInstallStep {
+    param(
+        $Profile
+    )
+
+    if ($null -eq $Profile) {
+        Write-Warning "Nenhum perfil POS foi carregado. Passo de pagamentos ignorado."
+        return
+    }
+
+    Invoke-PaymentInstallPlan -Profile $Profile
+}
+
 # Define the environment variable
 $Environment = "Dev" # Change this to "Release" to prevent the function from running
 
@@ -1516,37 +1574,40 @@ $stepDefinitions = [ordered]@{
         Action = { Invoke-PeripheralInstallStep -Profile $PosProfile }
     }
     "6" = @{ 
+		Description = "Instalar pagamentos do perfil POS";
+		Action = { Invoke-PaymentInstallStep -Profile $PosProfile } }
+    "7" = @{ 
 		Description = "Criar pasta C:\TotalCheckout\Database"; 
 		Action = { Create-TotalCheckoutDatabaseFolder } }
-    "7" = @{ 
+    "8" = @{ 
 		Description = "Copiar pasta nginx"; 
 		Action = { Copy-NginxFolder } }
-    "8" = @{ 
+    "9" = @{ 
 		Description = "Copiar pasta nwjs"; 
 		Action = { Copy-NwjsFolder } }
-    "9" = @{ 
+    "10" = @{ 
 		Description = "Copiar pasta nssm"; 
 		Action = { Copy-NssmFolder } }
-    "10" = @{ 
+    "11" = @{ 
 		Description = "Download e instalação de FFmpeg"; 
 		Action = { Download-And-Setup-FFmpeg } }
-    "11" = @{ 
+    "12" = @{ 
 		Description = "Instalar IaaS.exe como Windows Service"; 
 		Action = { Install-IaaS-Service } }
-    "12" = @{
+    "13" = @{
         Description = "Copiar ServicesWindows para C:\"
         Action = { Invoke-ServicesWindowsCopyStep }
     }
-	"13" = @{ 
+	"14" = @{ 
 		Description = "Copiar soluções para releases"; 
 		Action = { Copy-Services-Folders } }
-    "14" = @{ 
+    "15" = @{ 
 		Description = "Criar serviços Windows para APIs"; 
 		Action = { Create-Services } }
-    "15" = @{ 
+    "16" = @{ 
 		Description = "Instalar Devices API como Windows Service"; 
 		Action = { Install-Devices-Service } }
-    "16" = @{ 
+    "17" = @{ 
 		Description = "Iniciar serviços Windows do TotalCheckoutPOS"; 
 		Action = { Start-TotalCheckoutPOSServices } }
 	#"17" = @{ 
