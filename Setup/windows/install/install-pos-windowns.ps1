@@ -42,6 +42,7 @@ $epsonDisplayNameValue = "Epson JavaPOS ADK 1.14.29"
 $datalogicInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\Datalogic\610008819"
 $datalogicInstallerName = "JavaPOS_Setup.jar"
 $datalogicInstallerPath = Join-Path -Path $datalogicInstallFolder -ChildPath $datalogicInstallerName
+$datalogicAutoInstallFile = Join-Path -Path $datalogicInstallFolder -ChildPath "auto-install.xml"
 $datalogicRegistryKey = "HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Installer\Dependencies\{DATALOGIC-JAVAPOS}"
 $datalogicDisplayNameValue = "Datalogic JavaPOS"
 
@@ -542,8 +543,14 @@ function Install-DatalogicJavaPOS {
 
     $baseArgs = @("-jar", $datalogicInstallerPath)
 
-    # 1) tenta com -silent
-    $argsSilent = $baseArgs + @("-silent")
+    # 1) tenta com auto-install.xml (modo silent oficial)
+    $argsSilent = $baseArgs
+    if (Test-Path -Path $datalogicAutoInstallFile) {
+        $argsSilent += @("-auto", $datalogicAutoInstallFile)
+    } else {
+        Write-Warning "Datalogic auto-install.xml not found at '$datalogicAutoInstallFile'. Retrying with legacy -silent flag."
+        $argsSilent += @("-silent")
+    }
     Write-Output ("Command: `"$javaPath`" " + ($argsSilent -join ' '))
 
     $proc = Start-Process -FilePath $javaPath -ArgumentList $argsSilent -Wait -PassThru -NoNewWindow
