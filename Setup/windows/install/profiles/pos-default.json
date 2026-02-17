@@ -1,15 +1,6 @@
 {
   "model": "pos-default",
   "description": "Perfil base para instalação de POS com periféricos selecionáveis.",
-  "paths": {
-    "databaseFolder": "C:\\TotalCheckout\\Database",
-    "nginxSource": "C:\\TotalCheckout\\PackagePOS\\infra\\nginx",
-    "nginxDestination": "C:\\nginx",
-    "nwjsSource": "C:\\TotalCheckout\\PackagePOS\\nwjs",
-    "nwjsDestination": "C:\\nwjs",
-    "nssmSource": "C:\\TotalCheckout\\PackagePOS\\nssm",
-    "nssmDestination": "C:\\nssm"
-  },
   "peripherals": [
     {
       "name": "printer-epson",

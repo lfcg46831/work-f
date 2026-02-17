@@ -186,19 +186,7 @@ function Apply-PosProfile {
         $Profile
     )
 	if ($null -eq $Profile) { throw "POS profile is null. Ensure -ProfilePath is provided and the JSON file exists and is valid." }
-	if ($null -eq $Profile.paths) { throw "Profile is missing 'paths' node." }
 	if ($null -eq $Profile.environment) { throw "Profile is missing 'environment' node." }
-
-    $global:sourceFolderForNginx = Get-ProfileValue -Node $Profile.paths -PropertyName "nginxSource" -DefaultValue $global:sourceFolderForNginx
-    $global:destinationFolderForNginx = Get-ProfileValue -Node $Profile.paths -PropertyName "nginxDestination" -DefaultValue $global:destinationFolderForNginx
-
-    $global:sourceFolderForNwjs = Get-ProfileValue -Node $Profile.paths -PropertyName "nwjsSource" -DefaultValue $global:sourceFolderForNwjs
-    $global:destinationFolderForNwjs = Get-ProfileValue -Node $Profile.paths -PropertyName "nwjsDestination" -DefaultValue $global:destinationFolderForNwjs
-
-    $global:sourceFolderForNssm = Get-ProfileValue -Node $Profile.paths -PropertyName "nssmSource" -DefaultValue $global:sourceFolderForNssm
-    $global:destinationFolderForNssm = Get-ProfileValue -Node $Profile.paths -PropertyName "nssmDestination" -DefaultValue $global:destinationFolderForNssm
-
-    $global:folderPath = Get-ProfileValue -Node $Profile.paths -PropertyName "databaseFolder" -DefaultValue $global:folderPath
 
     $global:Environment = Get-ProfileValue -Node $Profile.environment -PropertyName "releaseMode" -DefaultValue $global:Environment
 
