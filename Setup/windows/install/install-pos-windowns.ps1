@@ -1,6 +1,5 @@
 ﻿param(
     [string]$ProfilePath = "",
-    [switch]$UseInstallPlan,
     [string[]]$Steps = @("full")
 )
 
@@ -1619,14 +1618,6 @@ try {
     exit 1
 }
 
-if ($UseInstallPlan -and $null -ne $PosProfile) {
-    $profileEnvVarsObject = Get-ProfileValue -Node $PosProfile.environment -PropertyName "variables" -DefaultValue $null
-    if ($null -ne $profileEnvVarsObject) {
-        $profileEnvVars = ConvertTo-Hashtable -InputObject $profileEnvVarsObject
-        Add-OlcasEnviroment-Variables -CustomEnvVars $profileEnvVars
-    }
-}
-
 $stepDefinitions = [ordered]@{
     "1" = @{
         Description = "Install .NET SDK 8.0.401"
@@ -1660,48 +1651,49 @@ $stepDefinitions = [ordered]@{
 		Description = "Criar pasta C:\TotalCheckout\Database"; 
 		Action = { Create-TotalCheckoutDatabaseFolder } 
 	}
-    "9" = @{ 
+	"9" = @{
+        Description = "Instalar SQLiteStudio"
+        Action = { Install-SQLiteStudio }
+    }
+    "10" = @{ 
 		Description = "Copiar pasta nginx"; 
 		Action = { Copy-NginxFolder } 
 	}
-    "10" = @{ 
+    "11" = @{ 
 		Description = "Copiar pasta nwjs"; 
 		Action = { Copy-NwjsFolder } 
 	}
-    "11" = @{ 
+    "12" = @{ 
 		Description = "Download e instalação de FFmpeg"; 
 		Action = { Download-And-Setup-FFmpeg } 
 	}
-    "12" = @{
+    "13" = @{
         Description = "Copiar ServicesWindows para C:\"
         Action = { Invoke-ServicesWindowsCopyStep }
     }
-	"13" = @{ 
+	"14" = @{ 
 		Description = "Copiar soluções para releases"; 
 		Action = { Copy-Services-Folders }
 	}
-    "14" = @{ 
+    "15" = @{ 
 		Description = "Criar serviços Windows para APIs"; 
 		Action = { Create-Services } 
 	}
-    "15" = @{ 
-		Description = "Instalar Devices API como Windows Service"; 
-		Action = { Install-Devices-Service } }
     "16" = @{ 
+		Description = "Instalar Devices API como Windows Service"; 
+		Action = { Install-Devices-Service } 
+	}
+    "17" = @{ 
 		Description = "Iniciar serviços Windows do TotalCheckoutPOS"; 
 		Action = { Start-TotalCheckoutPOSServices } 
 	}
-	"17" = @{ 
+	"18" = @{ 
 		Description = "Instalar SQL Server Express para Olcas"; 
 		Action = { Install-SQLServerAndCreateUser } 
 	}
-    "18" = @{
+    "19" = @{
         Description = "Configurar e instalar Olcas"
         Action = { Invoke-OlcasInstallStep }
-    }
-    "19" = @{
-        Description = "Instalar SQLiteStudio"
-        Action = { Install-SQLiteStudio }
     }
 }
 
@@ -1719,6 +1711,5 @@ Write-Output "All installations are complete."
 
 # Exemplo de execução por perfil:
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json
-# powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -UseInstallPlan
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -Steps 1,2,5
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -Steps full
