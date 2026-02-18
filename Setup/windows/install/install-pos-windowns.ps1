@@ -1180,11 +1180,19 @@ function Copy-OlcasFolderContents {
 }
 
 function Execute-InstallOlcasCmd {
-    # Navigate to the directory
-    Set-Location -Path "C:\Olcas\Install"
+    $installDir = "C:\Olcas\Install"
 
-    # Run the command
-    Start-Process "install.cmd" -NoNewWindow -Wait
+    if (-Not (Test-Path -Path $installDir)) {
+        throw "Olcas install directory '$installDir' does not exist."
+    }
+
+    $installScript = Join-Path -Path $installDir -ChildPath "install.cmd"
+    if (-Not (Test-Path -Path $installScript)) {
+        throw "Olcas install script '$installScript' was not found."
+    }
+
+    # Execute through cmd to avoid path resolution issues with Start-Process.
+    Start-Process -FilePath "cmd.exe" -ArgumentList @('/c', $installScript) -NoNewWindow -Wait
 }
 
 function Invoke-OlcasInstallStep {
