@@ -21,9 +21,9 @@ $dotnetSDK86Path = "C:\Program Files (x86)\dotnet\sdk\$dotnetSDKVersion"
 $dotnetSDK64Path = "C:\Program Files\dotnet\sdk\$dotnetSDKVersion"
 
 # JDK Variables
-$jdkVersion = "17.0.11"
-$jdkInstallerFile = "$downloadFolder\jdk-$jdkVersion`_windows-x64_bin.exe"
-$jdkInstallDir = "C:\Program Files\Java\jdk-$jdkVersion"
+$javaPath = "C:\Program Files\Java\jdk-17\bin\java.exe"
+$jdkInstallerFile = "$downloadFolder\jdk-17.0.11_windows-x64_bin.exe"
+$jdkInstallDir = "C:\Program Files\Java\jdk-17"
 $jdkLogFile = "$downloadFolder\jdk-install.log"
 $jdkInstallerUrl = "https://download.oracle.com/java/17/archive/jdk-17.0.11_windows-x64_bin.exe"
 
@@ -58,12 +58,9 @@ $hpCashDrawerInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\HP"
 $hpCashDrawerInstallerName = "sp142606.exe"
 $hpCashDrawerInstallerPath = Join-Path -Path $hpCashDrawerInstallFolder -ChildPath $hpCashDrawerInstallerName
 
-# Path to Java executable
-$javaPath = "C:\Program Files\Java\jdk-17.0.11\bin\java.exe"
-
 # Define the DLL copying paths
 $sourceDirectory = "C:\Program Files\EPSON\JavaPOS\bin"
-$destinationDirectory = "C:\Program Files\Java\jdk-17.0.11\bin"
+$destinationDirectory = "C:\Program Files\Java\jdk-17\bin"
 $dllFiles = @("BluetoothIO.DLL", "epsonjpos.dll", "EthernetIO31.DLL", "SerialIO31.dll", "USBIO31.DLL")
 
 # Define the new directory to be added
