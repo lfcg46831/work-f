@@ -31,6 +31,8 @@ $jdkInstallerUrl = "https://download.oracle.com/java/17/archive/jdk-17.0.11_wind
 # Microsoft Visual C++ Redistributable
 $vcRedist86InstallerPath = "C:\TotalCheckout\PackagePOS\redistributables\VC_redist.x86.exe"
 $vcRedist64InstallerPath = "C:\TotalCheckout\PackagePOS\redistributables\VC_redist.x64.exe"
+$vcRedist2012x86InstallerPath = "C:\TotalCheckout\PackagePOS\redistributables\vcredist_2012_x86.exe"
+$vcRedist2012x64InstallerPath = "C:\TotalCheckout\PackagePOS\redistributables\vcredist_2012_x64.exe"
 
 # Define the paths for Epson JavaPOS
 $epsonInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\Epson_JavaPOS_ADK_11429"
@@ -420,20 +422,34 @@ function Invoke-JdkInstallStep {
     }
 }
 
-function Install-VCRedist86 {
-    if (-Not (Test-Path -Path $vcRedist86InstallerPath)) {
-        throw "VC++ Redistributable installer not found at '$vcRedist86InstallerPath'."
+function Install-VCRedist {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$InstallerPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Description,
+
+        [string]$ArgumentList = "/install /quiet /norestart"
+    )
+
+    if (-Not (Test-Path -Path $InstallerPath)) {
+        throw "VC++ Redistributable installer not found at '$InstallerPath'."
     }
 
-    Write-Output "Installing Microsoft Visual C++ Redistributable (x86) from '$vcRedist86InstallerPath'..."
-    $process = Start-Process -FilePath $vcRedist86InstallerPath -ArgumentList "/install /quiet /norestart" -Wait -PassThru -NoNewWindow
+    Write-Output "Installing $Description from '$InstallerPath'..."
+    $process = Start-Process -FilePath $InstallerPath -ArgumentList $ArgumentList -Wait -PassThru -NoNewWindow
 
     if ($process.ExitCode -in @(0, 1638, 3010)) {
-        Write-Output "Microsoft Visual C++ Redistributable (x86) installation completed with exit code $($process.ExitCode)."
+        Write-Output "$Description installation completed with exit code $($process.ExitCode)."
         return
     }
 
-    throw "VC++ Redistributable installation failed with exit code $($process.ExitCode)."
+    throw "VC++ Redistributable installation failed for '$Description' with exit code $($process.ExitCode)."
+}
+
+function Install-VCRedist86 {
+    Install-VCRedist -InstallerPath $vcRedist86InstallerPath -Description "Microsoft Visual C++ Redistributable (x86)"
 }
 
 function Invoke-VCRedist86InstallStep {
@@ -441,28 +457,26 @@ function Invoke-VCRedist86InstallStep {
 }
 
 function Invoke-VCRedistInstallStep {
+    Install-VCRedist2012x86
+    Install-VCRedist2012x64
     Install-VCRedist86
     Install-VCRedist64
 }
 
 function Install-VCRedist64 {
-    if (-Not (Test-Path -Path $vcRedist64InstallerPath)) {
-        throw "VC++ Redistributable installer not found at '$vcRedist64InstallerPath'."
-    }
-
-    Write-Output "Installing Microsoft Visual C++ Redistributable (x64) from '$vcRedist64InstallerPath'..."
-    $process = Start-Process -FilePath $vcRedist64InstallerPath -ArgumentList "/install /quiet /norestart" -Wait -PassThru -NoNewWindow
-
-    if ($process.ExitCode -in @(0, 1638, 3010)) {
-        Write-Output "Microsoft Visual C++ Redistributable (x64) installation completed with exit code $($process.ExitCode)."
-        return
-    }
-
-    throw "VC++ Redistributable installation failed with exit code $($process.ExitCode)."
+    Install-VCRedist -InstallerPath $vcRedist64InstallerPath -Description "Microsoft Visual C++ Redistributable (x64)"
 }
 
 function Invoke-VCRedist64InstallStep {
     Install-VCRedist64
+}
+
+function Install-VCRedist2012x86 {
+    Install-VCRedist -InstallerPath $vcRedist2012x86InstallerPath -Description "Microsoft Visual C++ Redistributable 2012 (x86)"
+}
+
+function Install-VCRedist2012x64 {
+    Install-VCRedist -InstallerPath $vcRedist2012x64InstallerPath -Description "Microsoft Visual C++ Redistributable 2012 (x64)"
 }
 
 # Function to install Epson JavaPOS
