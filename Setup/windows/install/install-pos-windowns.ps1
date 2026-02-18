@@ -1033,7 +1033,7 @@ function Start-TotalCheckoutPOSServices {
 }
 
 function Install-SQLServerAndCreateUser {
-    $installerPath = Join-Path -Path $toolsFolder -ChildPath "SQL2019-SSEI-Expr.exe"
+    $installerPath = Join-Path -Path $toolsFolder -ChildPath "SQLEXPR_x64_ENU.exe"
     $saPassword = "olc"  # Password for the 'sa' user
     $newUsername = "olc" # New user name to be created
     $newPassword = "olc" # Password for the new user
@@ -1607,47 +1607,47 @@ $stepDefinitions = [ordered]@{
         Description = "Instalar Microsoft Visual C++ Redistributable"
         Action = { Invoke-VCRedistInstallStep }
     }
-    "5" = @{
+	"5" = @{ 
+		Description = "Copiar pasta nssm"; 
+		Action = { Copy-NssmFolder } }
+    "6" = @{
         Description = "Instalar periféricos do perfil POS"
         Action = { Invoke-PeripheralInstallStep -Profile $PosProfile }
     }
-    "6" = @{ 
+    "7" = @{ 
 		Description = "Instalar pagamentos do perfil POS";
 		Action = { Invoke-PaymentInstallStep -Profile $PosProfile } }
-    "7" = @{ 
+    "8" = @{ 
 		Description = "Criar pasta C:\TotalCheckout\Database"; 
 		Action = { Create-TotalCheckoutDatabaseFolder } }
-    "8" = @{ 
+    "9" = @{ 
 		Description = "Copiar pasta nginx"; 
 		Action = { Copy-NginxFolder } }
-    "9" = @{ 
+    "10" = @{ 
 		Description = "Copiar pasta nwjs"; 
 		Action = { Copy-NwjsFolder } }
-    "10" = @{ 
-		Description = "Copiar pasta nssm"; 
-		Action = { Copy-NssmFolder } }
     "11" = @{ 
 		Description = "Download e instalação de FFmpeg"; 
 		Action = { Download-And-Setup-FFmpeg } }
-    "13" = @{
+    "12" = @{
         Description = "Copiar ServicesWindows para C:\"
         Action = { Invoke-ServicesWindowsCopyStep }
     }
-	"14" = @{ 
+	"13" = @{ 
 		Description = "Copiar soluções para releases"; 
 		Action = { Copy-Services-Folders } }
-    "15" = @{ 
+    "14" = @{ 
 		Description = "Criar serviços Windows para APIs"; 
 		Action = { Create-Services } }
-    "16" = @{ 
+    "15" = @{ 
 		Description = "Instalar Devices API como Windows Service"; 
 		Action = { Install-Devices-Service } }
-    "17" = @{ 
+    "16" = @{ 
 		Description = "Iniciar serviços Windows do TotalCheckoutPOS"; 
 		Action = { Start-TotalCheckoutPOSServices } }
-	#"17" = @{ 
-	#	Description = "Instalar SQL Server Express para Olcas"; 
-	#	Action = { Install-SQLServerAndCreateUser } }
+	"17" = @{ 
+		Description = "Instalar SQL Server Express para Olcas"; 
+		Action = { Install-SQLServerAndCreateUser } }
     #"18" = @{
     #    Description = "Configurar e instalar Olcas"
     #    Action = { Invoke-OlcasInstallStep }
