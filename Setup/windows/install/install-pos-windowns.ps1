@@ -1063,7 +1063,7 @@ function Install-SQLServerAndCreateUser {
     # Step 2: Verify if SQL Server is installed
     Write-Host "SQL Server installation completed. Verifying installation..."
     
-    $sqlServerPath = "C:\Program Files\Microsoft SQL Server\2019\SQL10_50_1\Tools\Binn\sqlcmd.exe"
+    $sqlServerPath = "C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\sqlcmd.exe"
 
     if (-Not (Test-Path $sqlServerPath)) {
         Write-Host "SQL Server was not installed correctly. Exiting..."
@@ -1196,7 +1196,11 @@ function Execute-InstallOlcasCmd {
 }
 
 function Invoke-OlcasInstallStep {
-    Add-OlcasEnviroment-Variables
+    $profileEnvVarsObject = Get-ProfileValue -Node $PosProfile.environment -PropertyName "variables" -DefaultValue $null
+    if ($null -ne $profileEnvVarsObject) {
+        $profileEnvVars = ConvertTo-Hashtable -InputObject $profileEnvVarsObject
+        Add-OlcasEnviroment-Variables -CustomEnvVars $profileEnvVars
+    }
     Copy-OlcasFolderContents -SourcePath "C:\TotalCheckout\PackagePOS\Olcas" -DestinationPath "C:\Olcas"
     Execute-InstallOlcasCmd
 }
