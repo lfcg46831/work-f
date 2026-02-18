@@ -86,6 +86,7 @@ $destinationFolderForNwjs = "C:\nwjs"
 # Define the source and destination paths for nssm
 $sourceFolderForNssm = "C:\TotalCheckout\PackagePOS\tools\nssm"
 $destinationFolderForNssm = "C:\nssm"
+$sqliteStudioInstallerPath = "C:\TotalCheckout\PackagePOS\tools\SQLiteStudio-3.4.21-windows-x64-installer.exe"
 
 # Define the URL for the FFmpeg build and local download path
 $ffmpegUrl = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
@@ -737,6 +738,16 @@ function Copy-NssmFolder {
     } else {
         throw "Source folder not found: $sourceFolderForNssm. Aborting script execution."
     }
+}
+
+function Install-SQLiteStudio {
+    if (-Not (Test-Path -Path $sqliteStudioInstallerPath)) {
+        throw "SQLiteStudio installer not found: $sqliteStudioInstallerPath."
+    }
+
+    $sqliteStudioArgs = "--mode unattended --unattendedmodeui none --install_for local"
+    Start-Process -FilePath $sqliteStudioInstallerPath -ArgumentList $sqliteStudioArgs -Wait
+    Write-Output "SQLiteStudio installed successfully."
 }
 
 function Download-And-Setup-FFmpeg {
@@ -1687,6 +1698,10 @@ $stepDefinitions = [ordered]@{
     "18" = @{
         Description = "Configurar e instalar Olcas"
         Action = { Invoke-OlcasInstallStep }
+    }
+    "19" = @{
+        Description = "Instalar SQLiteStudio"
+        Action = { Install-SQLiteStudio }
     }
 }
 
