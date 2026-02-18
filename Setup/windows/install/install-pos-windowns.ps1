@@ -204,17 +204,17 @@ function Get-DevicesLibraryPath {
 
     $peripheralPathMap = @{
         "datalogic-scanner" = @(
-            "C:\Program Files\Datalogic\JavaPOS",
-            "C:\Program Files\Datalogic\JavaPOS\SupportJars"
+            'C:\Program Files\Datalogic\JavaPOS',
+            'C:\Program Files\Datalogic\JavaPOS\SupportJars'
         )
         "epson-printer" = @(
-            "C:\Program Files\EPSON\JavaPOS\lib",
-            "C:\Program Files\EPSON\JavaPOS\bin",
-            "C:\Program Files\EPSON\JavaPOS\SetupPOS"
+            'C:\Program Files\EPSON\JavaPOS\lib',
+            'C:\Program Files\EPSON\JavaPOS\bin',
+            'C:\Program Files\EPSON\JavaPOS\SetupPOS'
         )
         "hp-cash-drawer" = @(
-            "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib",
-            "C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib\x64"
+            'C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib',
+            'C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib\x64'
         )
     }
 
@@ -994,7 +994,7 @@ function Install-Devices-Service {
 		exit 1
 	}
 
-	$APP_PARAMETERS = "-Dmicronaut.config.files=$CONFIG_FILE -Djava.library.path=`\"$LIB_PATH`\" -Dlog4j.configurationFile=$LOG4J_CONFIG -jar $JAR_FILE"
+	$APP_PARAMETERS = "-Dmicronaut.config.files=$CONFIG_FILE -Djava.library.path=""""$LIB_PATH"""" -Dlog4j.configurationFile=$LOG4J_CONFIG -jar $JAR_FILE"
 	& $NSSM_PATH set $SERVICE_NAME AppParameters $APP_PARAMETERS
 	if (!$?) {
 		Write-Error "Error setting AppParameters! Exiting..."
