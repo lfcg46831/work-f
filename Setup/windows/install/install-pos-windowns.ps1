@@ -988,9 +988,16 @@ function Install-Devices-Service {
 	
 	# Install the service
 	Write-Output "Installing service '$SERVICE_NAME'..."
-	& $NSSM_PATH install $SERVICE_NAME "$javaPath" "-Dmicronaut.config.files=$CONFIG_FILE" "-Djava.library.path=$LIB_PATH" "-Dlog4j.configurationFile=$LOG4J_CONFIG" -jar $JAR_FILE
+	& $NSSM_PATH install $SERVICE_NAME "$javaPath"
 	if (!$?) {
 		Write-Error "Error creating service! Exiting..."
+		exit 1
+	}
+
+	$APP_PARAMETERS = "-Dmicronaut.config.files=$CONFIG_FILE -Djava.library.path=`\"$LIB_PATH`\" -Dlog4j.configurationFile=$LOG4J_CONFIG -jar $JAR_FILE"
+	& $NSSM_PATH set $SERVICE_NAME AppParameters $APP_PARAMETERS
+	if (!$?) {
+		Write-Error "Error setting AppParameters! Exiting..."
 		exit 1
 	}
 	
