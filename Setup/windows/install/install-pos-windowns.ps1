@@ -994,7 +994,7 @@ function Install-Devices-Service {
 		exit 1
 	}
 
-	$APP_PARAMETERS = "-Dmicronaut.config.files=$CONFIG_FILE -Djava.library.path=""""$LIB_PATH"""" -Dlog4j.configurationFile=$LOG4J_CONFIG -jar $JAR_FILE"
+	$APP_PARAMETERS = "-Dmicronaut.config.files=$CONFIG_FILE -Djava.library.path=""""$LIB_PATH"""" -Dlog4j.configurationFile=$LOG4J_CONFIG -Dlog.file.path=C:\TotalCheckout\Logs\TotalCheckoutPOS.Devices\ -jar $JAR_FILE"
 	& $NSSM_PATH set $SERVICE_NAME AppParameters $APP_PARAMETERS
 	if (!$?) {
 		Write-Error "Error setting AppParameters! Exiting..."
