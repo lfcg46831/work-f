@@ -1055,7 +1055,7 @@ function Install-SQLServerAndCreateUser {
     # Step 1: Install SQL Server Express Edition with default instance
     Write-Host "Starting SQL Server installation..."
 
-    $installArgs = "/QS /IACCEPTSQLSERVERLICENSETERMS /ACTION=Install /FEATURES=SQLEngine /INSTANCENAME=MSSQLSERVER /SQLSYSADMINACCOUNTS=SA /SAPWD=$saPassword"
+    $installArgs = "/QS /IACCEPTSQLSERVERLICENSETERMS /ACTION=Install /FEATURES=SQLEngine /INSTANCENAME=MSSQLSERVER /ADDCURRENTUSERASSQLADMIN=True /SAPWD=$saPassword"
     
     # Run the SQL Server installer
     Start-Process -FilePath $installerPath -ArgumentList $installArgs -Wait
@@ -1189,7 +1189,7 @@ function Execute-InstallOlcasCmd {
 
 function Invoke-OlcasInstallStep {
     Add-OlcasEnviroment-Variables
-    Copy-OlcasFolderContents -SourcePath "C:\TotalCheckout\PackagePOS\Olcas" -DestinationPath "C:\"
+    Copy-OlcasFolderContents -SourcePath "C:\TotalCheckout\PackagePOS\Olcas" -DestinationPath "C:\Olcas"
     Execute-InstallOlcasCmd
 }
 
@@ -1623,49 +1623,59 @@ $stepDefinitions = [ordered]@{
     }
 	"5" = @{ 
 		Description = "Copiar pasta nssm"; 
-		Action = { Copy-NssmFolder } }
+		Action = { Copy-NssmFolder } 
+	}
     "6" = @{
         Description = "Instalar periféricos do perfil POS"
         Action = { Invoke-PeripheralInstallStep -Profile $PosProfile }
     }
     "7" = @{ 
 		Description = "Instalar pagamentos do perfil POS";
-		Action = { Invoke-PaymentInstallStep -Profile $PosProfile } }
+		Action = { Invoke-PaymentInstallStep -Profile $PosProfile } 
+	}
     "8" = @{ 
 		Description = "Criar pasta C:\TotalCheckout\Database"; 
-		Action = { Create-TotalCheckoutDatabaseFolder } }
+		Action = { Create-TotalCheckoutDatabaseFolder } 
+	}
     "9" = @{ 
 		Description = "Copiar pasta nginx"; 
-		Action = { Copy-NginxFolder } }
+		Action = { Copy-NginxFolder } 
+	}
     "10" = @{ 
 		Description = "Copiar pasta nwjs"; 
-		Action = { Copy-NwjsFolder } }
+		Action = { Copy-NwjsFolder } 
+	}
     "11" = @{ 
 		Description = "Download e instalação de FFmpeg"; 
-		Action = { Download-And-Setup-FFmpeg } }
+		Action = { Download-And-Setup-FFmpeg } 
+	}
     "12" = @{
         Description = "Copiar ServicesWindows para C:\"
         Action = { Invoke-ServicesWindowsCopyStep }
     }
 	"13" = @{ 
 		Description = "Copiar soluções para releases"; 
-		Action = { Copy-Services-Folders } }
+		Action = { Copy-Services-Folders }
+	}
     "14" = @{ 
 		Description = "Criar serviços Windows para APIs"; 
-		Action = { Create-Services } }
+		Action = { Create-Services } 
+	}
     "15" = @{ 
 		Description = "Instalar Devices API como Windows Service"; 
 		Action = { Install-Devices-Service } }
     "16" = @{ 
 		Description = "Iniciar serviços Windows do TotalCheckoutPOS"; 
-		Action = { Start-TotalCheckoutPOSServices } }
+		Action = { Start-TotalCheckoutPOSServices } 
+	}
 	"17" = @{ 
 		Description = "Instalar SQL Server Express para Olcas"; 
-		Action = { Install-SQLServerAndCreateUser } }
-    #"18" = @{
-    #    Description = "Configurar e instalar Olcas"
-    #    Action = { Invoke-OlcasInstallStep }
-    #}
+		Action = { Install-SQLServerAndCreateUser } 
+	}
+    "18" = @{
+        Description = "Configurar e instalar Olcas"
+        Action = { Invoke-OlcasInstallStep }
+    }
 }
 
 $availableSteps = @($stepDefinitions.Keys)
