@@ -196,6 +196,10 @@ function Apply-PosProfile {
 }
 
 function Get-DevicesLibraryPath {
+	param(
+		$Profile
+	)
+	
     $basePaths = @()
 
     $peripheralPathMap = @{
@@ -215,19 +219,20 @@ function Get-DevicesLibraryPath {
     }
 
     $enabledInstallers = @()
-    if ($null -ne $global:PosProfile -and $global:PosProfile.PSObject.Properties.Name -contains "peripherals") {
-        foreach ($peripheral in $global:PosProfile.peripherals) {
-            $enabled = Get-ProfileValue -Node $peripheral -PropertyName "enabled" -DefaultValue $false
-            $installer = Get-ProfileValue -Node $peripheral -PropertyName "installer"
-			
-			Write-Host "Peripheral: $($peripheral.name)"
-			Write-Host "  -> Enabled  : $enabled"
-			Write-Host "  -> Installer: $installer"
-			Write-Host "------------------------------------"
-
-            if ($enabled -and -not [string]::IsNullOrWhiteSpace($installer)) {
-                $enabledInstallers += $installer.ToLowerInvariant()
-            }
+    $peripherals = @($Profile.peripherals)
+    foreach ($peripheral in $peripherals) {
+		Write-Host "Peripheral: $($peripheral.name)"
+		Write-Host "  -> Installer: $installer"
+		Write-Host "------------------------------------"
+		
+		if (-Not (Get-ProfileValue -Node $peripheral -PropertyName "enabled" -DefaultValue $true)) {
+            continue
+        }
+	
+        $installer = Get-ProfileValue -Node $peripheral -PropertyName "installer"
+		
+        if (-not [string]::IsNullOrWhiteSpace($installer)) {
+            $enabledInstallers += $installer.ToLowerInvariant()
         }
     }
 
@@ -953,75 +958,78 @@ Write-Host "Nginx service '$serviceName' installed and started successfully."
 
 # Install devices_service
 function Install-Devices-Service {
-# Define variables
-$SERVICE_NAME = "TotalCheckoutPOS.Devices"
-$WORKING_DIR = "C:\Releases\TotalCheckoutPOS.Devices"
-$JAR_FILE = Join-Path $WORKING_DIR "Devices-all.jar"
-$CONFIG_FILE = Join-Path $WORKING_DIR "application.properties"
-$LOG4J_CONFIG = Join-Path $WORKING_DIR "log4j2.xml"
-$LIB_PATH = Get-DevicesLibraryPath
-Write-Output "Using java.library.path: $LIB_PATH"
-
-# Check if the service is already installed
-Write-Output "Checking if service '$SERVICE_NAME' is already installed..."
-$service = Get-Service -Name $SERVICE_NAME -ErrorAction SilentlyContinue
-
-if ($service) {
-    Write-Output "Service '$SERVICE_NAME' is already installed. Stopping it..."
-    Stop-Service -Name $SERVICE_NAME -Force -ErrorAction SilentlyContinue
-    Write-Output "Service '$SERVICE_NAME' stopped. Removing it..."
-    sc.exe delete $SERVICE_NAME | Out-Null
-    Write-Output "Service '$SERVICE_NAME' removed."
-
-    # Add a delay to ensure the service is completely deleted
-    Start-Sleep -Seconds 5
-}
-
-# Install the service
-Write-Output "Installing service '$SERVICE_NAME'..."
-& $NSSM_PATH install $SERVICE_NAME "$javaPath" "-Dmicronaut.config.files=$CONFIG_FILE" "-Djava.library.path=$LIB_PATH" "-Dlog4j.configurationFile=$LOG4J_CONFIG" -jar $JAR_FILE
-if (!$?) {
-    Write-Error "Error creating service! Exiting..."
-    exit 1
-}
-
-& $NSSM_PATH set $SERVICE_NAME AppDirectory $WORKING_DIR
-if (!$?) {
-    Write-Error "Error setting AppDirectory! Exiting..."
-    exit 1
-}
-
-& $NSSM_PATH set $SERVICE_NAME DisplayName "TotalCheckoutPOS.Devices.Api"
-if (!$?) {
-    Write-Error "Error setting DisplayName! Exiting..."
-    exit 1
-}
-
-& $NSSM_PATH set $SERVICE_NAME Start SERVICE_AUTO_START
-if (!$?) {
-    Write-Error "Error setting Start! Exiting..."
-    exit 1
-}
-
-Write-Output "Service '$SERVICE_NAME' installed successfully."
-
-# Start the service
-# Validate the existence of the JAR file
-if (-Not (Test-Path -Path $JAR_FILE)) {
-    Write-Error "JAR file '$JAR_FILE' does not exist. Service creation aborted."
-    exit 1
-}
-else {
-    Write-Output "Starting service '$SERVICE_NAME'..."
-    Start-Service -Name $SERVICE_NAME
-    if (!$?) {
-        Write-Error "Error starting service! Exiting..."
-        exit 1
-    }
-    
-    Write-Output "Service '$SERVICE_NAME' started successfully."
-}
-
+	param(
+		$Profile
+	)
+	
+	# Define variables
+	$SERVICE_NAME = "TotalCheckoutPOS.Devices"
+	$WORKING_DIR = "C:\Releases\TotalCheckoutPOS.Devices"
+	$JAR_FILE = Join-Path $WORKING_DIR "Devices-all.jar"
+	$CONFIG_FILE = Join-Path $WORKING_DIR "application.properties"
+	$LOG4J_CONFIG = Join-Path $WORKING_DIR "log4j2.xml"
+	$LIB_PATH = Get-DevicesLibraryPath -Profile $Profile
+	Write-Output "Using java.library.path: $LIB_PATH"
+	
+	# Check if the service is already installed
+	Write-Output "Checking if service '$SERVICE_NAME' is already installed..."
+	$service = Get-Service -Name $SERVICE_NAME -ErrorAction SilentlyContinue
+	
+	if ($service) {
+		Write-Output "Service '$SERVICE_NAME' is already installed. Stopping it..."
+		Stop-Service -Name $SERVICE_NAME -Force -ErrorAction SilentlyContinue
+		Write-Output "Service '$SERVICE_NAME' stopped. Removing it..."
+		sc.exe delete $SERVICE_NAME | Out-Null
+		Write-Output "Service '$SERVICE_NAME' removed."
+	
+		# Add a delay to ensure the service is completely deleted
+		Start-Sleep -Seconds 5
+	}
+	
+	# Install the service
+	Write-Output "Installing service '$SERVICE_NAME'..."
+	& $NSSM_PATH install $SERVICE_NAME "$javaPath" "-Dmicronaut.config.files=$CONFIG_FILE" "-Djava.library.path=$LIB_PATH" "-Dlog4j.configurationFile=$LOG4J_CONFIG" -jar $JAR_FILE
+	if (!$?) {
+		Write-Error "Error creating service! Exiting..."
+		exit 1
+	}
+	
+	& $NSSM_PATH set $SERVICE_NAME AppDirectory $WORKING_DIR
+	if (!$?) {
+		Write-Error "Error setting AppDirectory! Exiting..."
+		exit 1
+	}
+	
+	& $NSSM_PATH set $SERVICE_NAME DisplayName "TotalCheckoutPOS.Devices.Api"
+	if (!$?) {
+		Write-Error "Error setting DisplayName! Exiting..."
+		exit 1
+	}
+	
+	& $NSSM_PATH set $SERVICE_NAME Start SERVICE_AUTO_START
+	if (!$?) {
+		Write-Error "Error setting Start! Exiting..."
+		exit 1
+	}
+	
+	Write-Output "Service '$SERVICE_NAME' installed successfully."
+	
+	# Start the service
+	# Validate the existence of the JAR file
+	if (-Not (Test-Path -Path $JAR_FILE)) {
+		Write-Error "JAR file '$JAR_FILE' does not exist. Service creation aborted."
+		exit 1
+	}
+	else {
+		Write-Output "Starting service '$SERVICE_NAME'..."
+		Start-Service -Name $SERVICE_NAME
+		if (!$?) {
+			Write-Error "Error starting service! Exiting..."
+			exit 1
+		}
+		
+		Write-Output "Service '$SERVICE_NAME' started successfully."
+	}
 }
 
 function Start-TotalCheckoutPOSServices {
@@ -1678,7 +1686,7 @@ $stepDefinitions = [ordered]@{
 	}
     "16" = @{ 
 		Description = "Instalar Devices API como Windows Service"; 
-		Action = { Install-Devices-Service } 
+		Action = { Install-Devices-Service -Profile $PosProfile } 
 	}
     "17" = @{ 
 		Description = "Iniciar serviços Windows do TotalCheckoutPOS"; 
