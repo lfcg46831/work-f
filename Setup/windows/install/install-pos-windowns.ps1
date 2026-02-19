@@ -77,8 +77,8 @@ $folderPath = "C:\TotalCheckout\Database"
 $sourceZipForNginx = "C:\TotalCheckout\PackagePOS\infra\nginx.zip"
 $destinationFolderForNginx = "C:\nginx"
 
-# Define the source and destination paths for nwjs
-$sourceFolderForNwjs = "C:\TotalCheckout\PackagePOS\runtimes\nwjs"
+# Define the source zip and destination paths for nwjs
+$sourceZipForNwjs = "C:\TotalCheckout\PackagePOS\runtimes\nwjs.zip"
 $destinationFolderForNwjs = "C:\nwjs"
 
 # Define the source and destination paths for nssm
@@ -792,13 +792,17 @@ function Copy-NginxFolder {
 }
 
 function Copy-NwjsFolder {
-    # Check if the source folder exists
-    if (Test-Path -Path $sourceFolderForNwjs) {
-        # Copy the folder to the destination
-        Copy-Item -Path $sourceFolderForNwjs -Destination $destinationFolderForNwjs -Recurse -Force -ErrorAction Stop
-        Write-Output "Folder successfully copied to: $destinationFolderForNwjs"
+    # Check if the source zip exists
+    if (Test-Path -Path $sourceZipForNwjs) {
+        # Ensure destination folder is recreated from the zip contents
+        if (Test-Path -Path $destinationFolderForNwjs) {
+            Remove-Item -Path $destinationFolderForNwjs -Recurse -Force -ErrorAction Stop
+        }
+
+        Expand-Archive -Path $sourceZipForNwjs -DestinationPath $destinationFolderForNwjs -Force -ErrorAction Stop
+        Write-Output "Nwjs successfully extracted to: $destinationFolderForNwjs"
     } else {
-        throw "Source folder not found: $sourceFolderForNwjs. Aborting script execution."
+        throw "Source zip not found: $sourceZipForNwjs. Aborting script execution."
     }
 }
 
@@ -1736,7 +1740,7 @@ try {
 		Action = { Copy-NginxFolder } 
 	}
     "11" = @{ 
-		Description = "Copiar pasta nwjs"; 
+		Description = "Descompactar nwjs"; 
 		Action = { Copy-NwjsFolder } 
 	}
     "12" = @{ 
