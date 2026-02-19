@@ -1203,40 +1203,23 @@ function Add-OlcasEnviroment-Variables{
 
 function Copy-OlcasFolderContents {
     param (
-        [string]$SourcePath = "C:\TotalCheckout\PackagePOS\Olcas",
+        [string]$SourceZipPath = "C:\TotalCheckout\PackagePOS\Olcas\Olcas.zip",
         [string]$DestinationPath = "C:\"
     )
 
-    # Ensure source path exists
-    if (-Not (Test-Path -Path $SourcePath)) {
-        Write-Error "Source path '$SourcePath' does not exist."
-        return
+    if (-Not (Test-Path -Path $SourceZipPath)) {
+        throw "Olcas package not found at '$SourceZipPath'. Installation cannot continue."
     }
 
     # Ensure destination path exists, create if it doesn't
     if (-Not (Test-Path -Path $DestinationPath)) {
         Write-Host "Destination path '$DestinationPath' does not exist. Creating it..."
-        New-Item -ItemType Directory -Path $DestinationPath -Force
+        New-Item -ItemType Directory -Path $DestinationPath -Force | Out-Null
     }
 
-    try {
-        # Copy contents of source folder to destination
-        Get-ChildItem -Path $SourcePath -Recurse | ForEach-Object {
-            $destination = Join-Path -Path $DestinationPath -ChildPath $_.FullName.Substring($SourcePath.Length).TrimStart("\")
-            if ($_.PSIsContainer) {
-                # Create destination folder if it doesn't exist
-                if (-Not (Test-Path -Path $destination)) {
-                    New-Item -ItemType Directory -Path $destination -Force
-                }
-            } else {
-                # Copy file to destination
-                Copy-Item -Path $_.FullName -Destination $destination -Force
-            }
-        }
-        Write-Host "Contents copied successfully from '$SourcePath' to '$DestinationPath'."
-    } catch {
-        Write-Error "An error occurred while copying: $_"
-    }
+    Write-Output "Olcas zip package found at '$SourceZipPath'. Extracting directly to '$DestinationPath'..."
+    Expand-Archive -Path $SourceZipPath -DestinationPath $DestinationPath -Force
+    Write-Output "Olcas package extracted successfully to '$DestinationPath'."
 }
 
 function Execute-InstallOlcasCmd {
@@ -1261,7 +1244,7 @@ function Invoke-OlcasInstallStep {
         $profileEnvVars = ConvertTo-Hashtable -InputObject $profileEnvVarsObject
         Add-OlcasEnviroment-Variables -CustomEnvVars $profileEnvVars
     }
-    Copy-OlcasFolderContents -SourcePath "C:\TotalCheckout\PackagePOS\Olcas" -DestinationPath "C:\Olcas"
+    Copy-OlcasFolderContents -DestinationPath "C:\Olcas"
     Execute-InstallOlcasCmd
 }
 
