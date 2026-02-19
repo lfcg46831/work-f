@@ -71,8 +71,8 @@ $currentPath = [System.Environment]::GetEnvironmentVariable('Path', [System.Envi
 # Define the folder path
 $folderPath = "C:\TotalCheckout\Database"
 
-# Define the source and destination paths for nginx
-$sourceFolderForNginx = "C:\TotalCheckout\PackagePOS\infra\nginx"
+# Define the source zip and destination paths for nginx
+$sourceZipForNginx = "C:\TotalCheckout\PackagePOS\infra\nginx.zip"
 $destinationFolderForNginx = "C:\nginx"
 
 # Define the source and destination paths for nwjs
@@ -747,13 +747,17 @@ function Create-TotalCheckoutDatabaseFolder {
 }
 
 function Copy-NginxFolder {
-    # Check if the source folder exists
-    if (Test-Path -Path $sourceFolderForNginx) {
-        # Copy the folder to the destination
-        Copy-Item -Path $sourceFolderForNginx -Destination $destinationFolderForNginx -Recurse -Force -ErrorAction Stop
-        Write-Output "Folder successfully copied to: $destinationFolderForNginx"
+    # Check if the source zip exists
+    if (Test-Path -Path $sourceZipForNginx) {
+        # Ensure destination folder is recreated from the zip contents
+        if (Test-Path -Path $destinationFolderForNginx) {
+            Remove-Item -Path $destinationFolderForNginx -Recurse -Force -ErrorAction Stop
+        }
+
+        Expand-Archive -Path $sourceZipForNginx -DestinationPath $destinationFolderForNginx -Force -ErrorAction Stop
+        Write-Output "Nginx successfully extracted to: $destinationFolderForNginx"
     } else {
-        throw "Source folder not found: $sourceFolderForNginx. Aborting script execution."
+        throw "Source zip not found: $sourceZipForNginx. Aborting script execution."
     }
 }
 
@@ -1698,7 +1702,7 @@ try {
         Action = { Install-SQLiteStudio }
     }
     "10" = @{ 
-		Description = "Copiar pasta nginx"; 
+		Description = "Descompactar nginx"; 
 		Action = { Copy-NginxFolder } 
 	}
     "11" = @{ 
