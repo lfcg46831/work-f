@@ -34,7 +34,8 @@ $vcRedist2012x86InstallerPath = "C:\TotalCheckout\PackagePOS\redistributables\vc
 $vcRedist2012x64InstallerPath = "C:\TotalCheckout\PackagePOS\redistributables\vcredist_2012_x64.exe"
 
 # Define the paths for Epson JavaPOS
-$epsonInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\Epson_JavaPOS_ADK_11429"
+$epsonInstallerZipPath = "C:\TotalCheckout\PackagePOS\peripherals\Epson\Epson_JavaPOS_ADK_11429.zip"
+$epsonInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\Epson\Epson_JavaPOS_ADK_11429"
 $epsonInstallerName = "EPSON_JavaPOS_1.14.29.exe"
 $epsonInstallerPath = Join-Path -Path $epsonInstallFolder -ChildPath $epsonInstallerName
 $epsonRegistryKey = "HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Installer\Dependencies\{855D735A-B51F-446C-A4C5-73676BD59463}"
@@ -532,8 +533,23 @@ function Install-EpsonJavaPOS {
     }
 
     if (-not $isInstalled) {
+        if (-not (Test-Path -Path $epsonInstallFolder)) {
+            if (-not (Test-Path -Path $epsonInstallerZipPath)) {
+                Write-Error "Epson package not found at $epsonInstallerZipPath. Please check the path."
+                exit 1
+            }
+
+            Write-Output "Extracting Epson JavaPOS package from $epsonInstallerZipPath to $epsonInstallFolder..."
+            try {
+                Expand-Archive -Path $epsonInstallerZipPath -DestinationPath $epsonInstallFolder -Force
+            } catch {
+                Write-Error "Failed to extract Epson JavaPOS package: $_"
+                exit 1
+            }
+        }
+
         if (-Not (Test-Path -Path $epsonInstallerPath)) {
-            Write-Error "Epson installer not found at $epsonInstallerPath. Please check the path."
+            Write-Error "Epson installer not found at $epsonInstallerPath after extraction. Please check package contents."
             exit 1
         }
 
