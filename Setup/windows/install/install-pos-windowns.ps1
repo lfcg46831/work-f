@@ -49,6 +49,7 @@ $datalogicRegistryKey = "HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Installer\Dependenc
 $datalogicDisplayNameValue = "Datalogic JavaPOS"
 
 # Define the paths for Citizen JavaPOS
+$citizenInstallerZipPath = "C:\TotalCheckout\PackagePOS\peripherals\Citizen\JavaPOS_V1.14.0.5E.zip"
 $citizenInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\Citizen\JavaPOS_V1.14.0.5E"
 $citizenInstallerName = "CSJ_JPOS11405_setup64EN.exe"
 $citizenInstallerPath = Join-Path -Path $citizenInstallFolder -ChildPath $citizenInstallerName
@@ -629,8 +630,21 @@ function Install-DatalogicJavaPOS {
 
 # Function to install Citizen JavaPOS
 function Install-CitizenJavaPOS {
+    if (Test-Path -Path $citizenInstallerZipPath) {
+        Write-Output "Extracting Citizen JavaPOS package from $citizenInstallerZipPath to $citizenInstallFolder..."
+        try {
+            Expand-Archive -Path $citizenInstallerZipPath -DestinationPath $citizenInstallFolder -Force -ErrorAction Stop
+        } catch {
+            Write-Error "Failed to extract Citizen JavaPOS package: $_"
+            exit 1
+        }
+    } elseif (-Not (Test-Path -Path $citizenInstallFolder)) {
+        Write-Error "Citizen package not found at $citizenInstallerZipPath and install folder does not exist at $citizenInstallFolder."
+        exit 1
+    }
+
     if (-Not (Test-Path -Path $citizenInstallerPath)) {
-        Write-Error "Citizen installer not found at $citizenInstallerPath. Please check the path."
+        Write-Error "Citizen installer not found at $citizenInstallerPath after extraction. Please check the package contents."
         exit 1
     }
 
