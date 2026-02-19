@@ -81,8 +81,8 @@ $destinationFolderForNginx = "C:\nginx"
 $sourceZipForNwjs = "C:\TotalCheckout\PackagePOS\runtimes\nwjs.zip"
 $destinationFolderForNwjs = "C:\nwjs"
 
-# Define the source and destination paths for nssm
-$sourceFolderForNssm = "C:\TotalCheckout\PackagePOS\tools\nssm"
+# Define the source zip and destination paths for nssm
+$sourceZipForNssm = "C:\TotalCheckout\PackagePOS\tools\nssm.zip"
 $destinationFolderForNssm = "C:\nssm"
 $sqliteStudioInstallerPath = "C:\TotalCheckout\PackagePOS\tools\SQLiteStudio-3.4.21-windows-x64-installer.exe"
 $ssms2019InstallerPath = "C:\TotalCheckout\PackagePOS\tools\SSMS-Setup-ENU.exe"
@@ -807,13 +807,17 @@ function Copy-NwjsFolder {
 }
 
 function Copy-NssmFolder {
-    # Check if the source folder exists
-    if (Test-Path -Path $sourceFolderForNssm) {
-        # Copy the folder to the destination
-        Copy-Item -Path $sourceFolderForNssm -Destination $destinationFolderForNssm -Recurse -Force -ErrorAction Stop
-        Write-Output "Folder successfully copied to: $destinationFolderForNssm"
+    # Check if the source zip exists
+    if (Test-Path -Path $sourceZipForNssm) {
+        # Ensure destination folder is recreated from the zip contents
+        if (Test-Path -Path $destinationFolderForNssm) {
+            Remove-Item -Path $destinationFolderForNssm -Recurse -Force -ErrorAction Stop
+        }
+
+        Expand-Archive -Path $sourceZipForNssm -DestinationPath $destinationFolderForNssm -Force -ErrorAction Stop
+        Write-Output "Nssm successfully extracted to: $destinationFolderForNssm"
     } else {
-        throw "Source folder not found: $sourceFolderForNssm. Aborting script execution."
+        throw "Source zip not found: $sourceZipForNssm. Aborting script execution."
     }
 }
 
@@ -1716,7 +1720,7 @@ try {
         Action = { Invoke-VCRedistInstallStep }
     }
 	"5" = @{ 
-		Description = "Copiar pasta nssm"; 
+		Description = "Descompactar nssm"; 
 		Action = { Copy-NssmFolder } 
 	}
     "6" = @{
