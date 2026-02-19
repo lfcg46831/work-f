@@ -83,6 +83,7 @@ $destinationFolderForNwjs = "C:\nwjs"
 $sourceFolderForNssm = "C:\TotalCheckout\PackagePOS\tools\nssm"
 $destinationFolderForNssm = "C:\nssm"
 $sqliteStudioInstallerPath = "C:\TotalCheckout\PackagePOS\tools\SQLiteStudio-3.4.21-windows-x64-installer.exe"
+$ssms2019InstallerPath = "C:\TotalCheckout\PackagePOS\tools\SSMS-Setup-ENU.exe"
 
 # Define the URL for the FFmpeg build and local download path
 $ffmpegUrl = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
@@ -1507,6 +1508,16 @@ function Invoke-DotNetFrameworkInstallStep {
     Install-DotNetFramework -SetupPath $setupPath
 }
 
+function Install-SSMS2019 {
+    if (-not (Test-Path -Path $ssms2019InstallerPath)) {
+        throw "SSMS 2019 installer not found at '$ssms2019InstallerPath'."
+    }
+
+    Write-Output "Starting SSMS 2019 installation..."
+    Start-Process -FilePath $ssms2019InstallerPath -ArgumentList "/install /quiet /norestart" -Wait -NoNewWindow
+    Write-Output "SSMS 2019 installation completed."
+}
+
 function Install-IaaS-Service {
     foreach ($sourceFile in $IngelinkSourceFiles) {
         if (-Not (Test-Path -Path $sourceFile)) {
@@ -1742,6 +1753,10 @@ try {
     "19" = @{
         Description = "Configurar e instalar Olcas"
         Action = { Invoke-OlcasInstallStep }
+    }
+    "20" = @{
+        Description = "Instalar SSMS 2019"
+        Action = { Install-SSMS2019 }
     }
     }
 
