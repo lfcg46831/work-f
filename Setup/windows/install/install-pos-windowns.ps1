@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 $downloadPath = "C:\TotalCheckout"
 $downloadFolder = "$downloadPath\PackagePOS\runtimes"
 $toolsFolder = "$downloadPath\PackagePOS\tools"
-$logFile = "$downloadFolder\install-log.txt"
+$logFile = ""
 
 # .NET SDK Variables
 $dotnetSDKVersion = "8.0.401"
@@ -122,6 +122,43 @@ $NSSM_PATH = "C:\nssm\win64\nssm.exe"
 
 # Perfil POS carregado de um ficheiro JSON (opcional)
 $PosProfile = $null
+$script:TranscriptStarted = $false
+
+function Initialize-InstallLogging {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$BaseFolder,
+
+        [int]$RetentionDays = 30
+    )
+
+    if (-not (Test-Path -Path $BaseFolder)) {
+        New-Item -Path $BaseFolder -ItemType Directory -Force | Out-Null
+    }
+
+    $logsFolder = Join-Path -Path $BaseFolder -ChildPath "logs"
+    if (-not (Test-Path -Path $logsFolder)) {
+        New-Item -Path $logsFolder -ItemType Directory -Force | Out-Null
+    }
+
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $script:logFile = Join-Path -Path $logsFolder -ChildPath "install-pos-$timestamp.log"
+
+    Get-ChildItem -Path $logsFolder -Filter "install-pos-*.log" -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$RetentionDays) } |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+
+    Start-Transcript -Path $script:logFile -Append -IncludeInvocationHeader | Out-Null
+    $script:TranscriptStarted = $true
+    Write-Output "Installation logging enabled. Log file: $script:logFile"
+}
+
+function Stop-InstallLogging {
+    if ($script:TranscriptStarted) {
+        Stop-Transcript | Out-Null
+        $script:TranscriptStarted = $false
+    }
+}
 
 function Get-ProfileValue {
     param(
@@ -1620,22 +1657,21 @@ function Invoke-InstallStep {
 }
 
 # Main Script Execution
-Write-Output "Starting installation process..."
+Initialize-InstallLogging -BaseFolder $downloadFolder
+$scriptFailed = $false
 
 try {
+    Write-Output "Starting installation process..."
+
     $PosProfile = Load-PosProfile -Path $ProfilePath
     Apply-PosProfile -Profile $PosProfile
-} catch {
-    Write-Error $_
-    exit 1
-}
 
-$stepDefinitions = [ordered]@{
+    $stepDefinitions = [ordered]@{
     "1" = @{
         Description = "Install .NET SDK 8.0.401"
         Action = { Invoke-DotnetSdkInstallStep }
     }
-	"2" = @{
+    "2" = @{
         Description = "Instalar .NET Framework 3.5"
         Action = { Invoke-DotNetFrameworkInstallStep }
     }
@@ -1707,19 +1743,32 @@ $stepDefinitions = [ordered]@{
         Description = "Configurar e instalar Olcas"
         Action = { Invoke-OlcasInstallStep }
     }
+    }
+
+    $availableSteps = @($stepDefinitions.Keys)
+    $selectedSteps = Resolve-SelectedInstallSteps -RequestedSteps $Steps -AvailableSteps $availableSteps
+
+    Write-Output "Selected installation steps: $([string]::Join(', ', $selectedSteps))"
+
+    foreach ($stepId in $selectedSteps) {
+        $stepDefinition = $stepDefinitions[$stepId]
+        Invoke-InstallStep -StepId $stepId -Description $stepDefinition.Description -Action $stepDefinition.Action
+    }
+
+    Write-Output "All installations are complete."
+}
+catch {
+    $scriptFailed = $true
+    Write-Error "Installation failed: $($_.Exception.Message)"
+    Write-Output "Logs can be found at: $script:logFile"
+}
+finally {
+    Stop-InstallLogging
 }
 
-$availableSteps = @($stepDefinitions.Keys)
-$selectedSteps = Resolve-SelectedInstallSteps -RequestedSteps $Steps -AvailableSteps $availableSteps
-
-Write-Output "Selected installation steps: $([string]::Join(', ', $selectedSteps))"
-
-foreach ($stepId in $selectedSteps) {
-    $stepDefinition = $stepDefinitions[$stepId]
-    Invoke-InstallStep -StepId $stepId -Description $stepDefinition.Description -Action $stepDefinition.Action
+if ($scriptFailed) {
+    exit 1
 }
-
-Write-Output "All installations are complete."
 
 # Exemplo de execução por perfil:
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json
