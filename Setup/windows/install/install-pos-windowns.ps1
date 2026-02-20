@@ -1,6 +1,7 @@
 ﻿param(
     [string]$ProfilePath = "",
-    [string[]]$Steps = @("full")
+    [string[]]$Steps = @("full"),
+    [switch]$RestartPos
 )
 
 $ErrorActionPreference = "Stop"
@@ -1693,6 +1694,13 @@ function Invoke-InstallStep {
     }
 }
 
+
+function Invoke-RestartPosStep {
+    Write-Output "RestartPos flag enabled. Restarting POS machine in 10 seconds..."
+    Start-Sleep -Seconds 10
+    Restart-Computer -Force
+}
+
 # Main Script Execution
 Initialize-InstallLogging -BaseFolder $downloadFolder
 $scriptFailed = $false
@@ -1796,6 +1804,10 @@ try {
         Invoke-InstallStep -StepId $stepId -Description $stepDefinition.Description -Action $stepDefinition.Action
     }
 
+    if ($RestartPos) {
+        Invoke-InstallStep -StepId "final" -Description "Reiniciar POS" -Action { Invoke-RestartPosStep }
+    }
+
     Write-Output "All installations are complete."
 }
 catch {
@@ -1815,3 +1827,4 @@ if ($scriptFailed) {
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -Steps 1,2,5
 # powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -Steps full
+# powershell -ExecutionPolicy Bypass -File .\install-pos-windowns.ps1 -ProfilePath .\profiles\pos-default.json -Steps full -RestartPos
