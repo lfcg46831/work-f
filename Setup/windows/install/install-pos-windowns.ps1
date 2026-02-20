@@ -1340,28 +1340,22 @@ function Invoke-PeripheralInstallStep {
 }
 
 function Install-IngelinkPPayment {
+
     if (-not (Test-Path -Path $IngelinkPDriverInstallerPath)) {
         throw "IngelinkP driver installer not found at '$IngelinkPDriverInstallerPath'."
     }
 
     Write-Output "Installing IngelinkP USB driver silently from '$IngelinkPDriverInstallerPath'..."
 
-    $silentArgsCandidates = @(
-        @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-'),
-        @('/S'),
-        @('/silent'),
-        @('/quiet')
-    )
+    $driverArgs = @('/S', '/PID=00A2:004')
+    Write-Output "Using IngelinkP silent driver args for posLane3600: $($driverArgs -join ' ')"
 
     $driverInstalled = $false
-    foreach ($driverArgs in $silentArgsCandidates) {
-        $process = Start-Process -FilePath $IngelinkPDriverInstallerPath -ArgumentList $driverArgs -Wait -PassThru
-        Write-Output "IngelinkP driver installer exit code with args '$($driverArgs -join ' ')': $($process.ExitCode)"
+    $process = Start-Process -FilePath $IngelinkPDriverInstallerPath -ArgumentList $driverArgs -Wait -PassThru
+    Write-Output "IngelinkP driver installer exit code with args '$($driverArgs -join ' ')': $($process.ExitCode)"
 
-        if ($process.ExitCode -eq 0) {
-            $driverInstalled = $true
-            break
-        }
+    if ($process.ExitCode -eq 0) {
+        $driverInstalled = $true
     }
 
     if (-not $driverInstalled) {
