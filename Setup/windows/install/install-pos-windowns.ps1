@@ -1345,6 +1345,13 @@ function Install-IngelinkPPayment {
         throw "IngelinkP driver installer not found at '$IngelinkPDriverInstallerPath'."
     }
 
+    Write-Output "Attempting to uninstall old IngelinkP USB driver before installation..."
+    $driverUninstallArgs = @('/S', '/U')
+    Write-Output "Using IngelinkP silent driver uninstall args: $($driverUninstallArgs -join ' ')"
+
+    $uninstallProcess = Start-Process -FilePath $IngelinkPDriverInstallerPath -ArgumentList $driverUninstallArgs -Wait -PassThru
+    Write-Output "IngelinkP driver uninstaller exit code with args '$($driverUninstallArgs -join ' ')': $($uninstallProcess.ExitCode)"
+
     Write-Output "Installing IngelinkP USB driver silently from '$IngelinkPDriverInstallerPath'..."
 
     $driverArgs = @('/S', '/PID=00A2:004')
