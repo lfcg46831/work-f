@@ -68,6 +68,7 @@ $zebraScannerInstallerName = "Zebra_Scanner_SDK_(64bit)_v3.07.0008.exe"
 $zebraScannerInstallerPath = Join-Path -Path $zebraScannerInstallFolder -ChildPath $zebraScannerInstallerName
 $zebraScannerSilentConfigPath = Join-Path -Path $zebraScannerInstallFolder -ChildPath "customsetup.iss"
 $zebraScannerJavaPOSBinPath = "C:\Program Files\Zebra Technologies\Barcode Scanners\Scanner SDK\JPOS\bin"
+$zebraScannerJavaPOSClasspathPath = "C:\Program Files\Zebra Technologies\Barcode Scanners\Scanner SDK\JPOS\bin\*"
 
 # Define the DLL copying paths
 $sourceDirectory = "C:\Program Files\EPSON\JavaPOS\bin"
@@ -734,6 +735,25 @@ function Install-ZebraScannerSDK {
         Write-Output "Zebra Scanner JavaPOS path added to PATH."
     } else {
         Write-Output "Zebra Scanner JavaPOS path is already in PATH."
+    }
+
+    $currentJavaPOSClasspath = [System.Environment]::GetEnvironmentVariable('JAVAPOS_CLASSPATH', [System.EnvironmentVariableTarget]::Machine)
+
+    if ([string]::IsNullOrWhiteSpace($currentJavaPOSClasspath)) {
+        [System.Environment]::SetEnvironmentVariable('JAVAPOS_CLASSPATH', $zebraScannerJavaPOSClasspathPath, [System.EnvironmentVariableTarget]::Machine)
+        $env:JAVAPOS_CLASSPATH = $zebraScannerJavaPOSClasspathPath
+        Write-Output "Zebra Scanner JavaPOS path added to JAVAPOS_CLASSPATH."
+    } else {
+        $classPathEntries = $currentJavaPOSClasspath -split ';' | ForEach-Object { $_.Trim() }
+
+        if ($classPathEntries -notcontains $zebraScannerJavaPOSClasspathPath) {
+            $newJavaPOSClasspath = "$currentJavaPOSClasspath;$zebraScannerJavaPOSClasspathPath"
+            [System.Environment]::SetEnvironmentVariable('JAVAPOS_CLASSPATH', $newJavaPOSClasspath, [System.EnvironmentVariableTarget]::Machine)
+            $env:JAVAPOS_CLASSPATH = $newJavaPOSClasspath
+            Write-Output "Zebra Scanner JavaPOS path appended to JAVAPOS_CLASSPATH."
+        } else {
+            Write-Output "Zebra Scanner JavaPOS path is already in JAVAPOS_CLASSPATH."
+        }
     }
 
     Write-Output "Zebra Scanner SDK installation completed successfully."
