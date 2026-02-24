@@ -43,6 +43,7 @@ $epsonRegistryKey = "HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Installer\Dependencies\
 $epsonDisplayNameValue = "Epson JavaPOS ADK 1.14.29"
 
 # Define the paths for Datalogic JavaPOS
+$dataLogicJavaPOSNewPath = "C:\Program Files\Datalogic\JavaPOS\SupportJars"
 $datalogicInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\Datalogic\610008819"
 $datalogicInstallerName = "JavaPOS_Setup.jar"
 $datalogicInstallerPath = Join-Path -Path $datalogicInstallFolder -ChildPath $datalogicInstallerName
@@ -72,8 +73,6 @@ $sourceDirectory = "C:\Program Files\EPSON\JavaPOS\bin"
 $destinationDirectory = "C:\Program Files\Java\jdk-17\bin"
 $dllFiles = @("BluetoothIO.DLL", "epsonjpos.dll", "EthernetIO31.DLL", "SerialIO31.dll", "USBIO31.DLL")
 
-# Define the new directory to be added
-$javaPOSNewPath = "C:\Program Files\Datalogic\JavaPOS\SupportJars"
 # Get the current system PATH variable
 $currentPath = [System.Environment]::GetEnvironmentVariable('Path', [System.EnvironmentVariableTarget]::Machine)
 
@@ -585,8 +584,8 @@ function Test-DatalogicJavaPOSInstalled {
     }
 
     if (-not $isInstalled) {
-        $datalogicBasePath = Split-Path -Path $javaPOSNewPath -Parent
-        if ((Test-Path -Path $datalogicBasePath) -or (Test-Path -Path $javaPOSNewPath)) {
+        $datalogicBasePath = Split-Path -Path $dataLogicJavaPOSNewPath -Parent
+        if ((Test-Path -Path $datalogicBasePath) -or (Test-Path -Path $dataLogicJavaPOSNewPath)) {
             $isInstalled = $true
         }
     }
@@ -773,9 +772,9 @@ function Add-JavaPOSPath {
     }
 
     # Check if the new path is already in the system PATH
-    if ($currentPath -notlike "*$javaPOSNewPath*") {
+    if ($currentPath -notlike "*$dataLogicJavaPOSNewPath*") {
         # Append the new path to the system PATH
-        $newPathValue = $currentPath + ";" + $javaPOSNewPath
+        $newPathValue = $currentPath + ";" + $dataLogicJavaPOSNewPath
         [System.Environment]::SetEnvironmentVariable('Path', $newPathValue, [System.EnvironmentVariableTarget]::Machine)
         Write-Output "Path successfully updated."
     } else {
@@ -786,8 +785,8 @@ function Add-JavaPOSPath {
     $env:Path = [System.Environment]::GetEnvironmentVariable('Path', [System.EnvironmentVariableTarget]::Machine)
 
     # Verify the Path is updated
-    if ($env:Path -like "*$javaPOSNewPath*") {
-        Write-Output "The path is now correctly added: $javaPOSNewPath"
+    if ($env:Path -like "*$dataLogicJavaPOSNewPath*") {
+        Write-Output "The path is now correctly added: $dataLogicJavaPOSNewPath"
     } else {
         Write-Output "The path was not added."
     }
