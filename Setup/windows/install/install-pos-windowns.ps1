@@ -264,6 +264,9 @@ function Get-DevicesLibraryPath {
             'C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib',
             'C:\Program Files (x86)\HP\HP Cash Drawer Port JPOS\lib\x64'
         )
+		"zebra-scanner" = @(
+            'C:\Program Files\Zebra Technologies\Barcode Scanners\Scanner SDK\JPOS\bin'
+        )
     }
 
     $enabledInstallers = @()
