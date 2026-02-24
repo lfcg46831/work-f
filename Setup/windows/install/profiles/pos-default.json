@@ -13,6 +13,11 @@
       "enabled": true
     },
     {
+      "name": "scanner-zebra",
+      "installer": "zebra-scanner",
+      "enabled": true
+    },
+    {
       "name": "printer-citizen",
       "installer": "citizen-printer",
       "enabled": true

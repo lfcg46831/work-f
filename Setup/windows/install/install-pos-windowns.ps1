@@ -61,6 +61,12 @@ $hpCashDrawerInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\HP"
 $hpCashDrawerInstallerName = "sp142606.exe"
 $hpCashDrawerInstallerPath = Join-Path -Path $hpCashDrawerInstallFolder -ChildPath $hpCashDrawerInstallerName
 
+# Define the paths for Zebra Scanner SDK
+$zebraScannerInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\Zebra"
+$zebraScannerInstallerName = "Zebra_Scanner_SDK_(64bit)_v3.07.0008.exe"
+$zebraScannerInstallerPath = Join-Path -Path $zebraScannerInstallFolder -ChildPath $zebraScannerInstallerName
+$zebraScannerSilentConfigPath = Join-Path -Path $zebraScannerInstallFolder -ChildPath "customsetup.iss"
+
 # Define the DLL copying paths
 $sourceDirectory = "C:\Program Files\EPSON\JavaPOS\bin"
 $destinationDirectory = "C:\Program Files\Java\jdk-17\bin"
@@ -701,6 +707,27 @@ function Install-HPCashDrawerDriver {
     }
 }
 
+# Function to install Zebra Scanner SDK
+function Install-ZebraScannerSDK {
+    if (-Not (Test-Path -Path $zebraScannerInstallerPath)) {
+        throw "Zebra Scanner SDK installer not found at '$zebraScannerInstallerPath'."
+    }
+
+    if (-Not (Test-Path -Path $zebraScannerSilentConfigPath)) {
+        throw "Zebra Scanner silent config file not found at '$zebraScannerSilentConfigPath'."
+    }
+
+    Write-Output "Installing Zebra Scanner SDK from $zebraScannerInstallerPath in silent mode..."
+    $zebraArgs = @('-s', "-f1$zebraScannerSilentConfigPath")
+    $process = Start-Process -FilePath $zebraScannerInstallerPath -ArgumentList $zebraArgs -Wait -PassThru -NoNewWindow
+
+    if ($process.ExitCode -ne 0) {
+        throw "Zebra Scanner SDK installer exited with code $($process.ExitCode)."
+    }
+
+    Write-Output "Zebra Scanner SDK installation completed successfully."
+}
+
 # Function to copy DLL files
 function Copy-DLLFiles {
     Write-Output "Starting the DLL file copy process..."
@@ -1320,6 +1347,7 @@ function Invoke-PeripheralInstallPlan {
         switch ($installer) {
             "epson-printer" { Install-EpsonJavaPOS; break }
             "datalogic-scanner" { Install-DatalogicJavaPOS; break }
+            "zebra-scanner" { Install-ZebraScannerSDK; break }
             "citizen-printer" { Install-CitizenJavaPOS; break }
             "hp-cash-drawer" { Install-HPCashDrawerDriver; break }
             default { Write-Warning "No installer mapped for peripheral '$name' (installer='$installer'). Skipping." }
