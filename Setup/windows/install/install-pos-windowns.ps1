@@ -67,6 +67,7 @@ $zebraScannerInstallFolder = "C:\TotalCheckout\PackagePOS\peripherals\Zebra"
 $zebraScannerInstallerName = "Zebra_Scanner_SDK_(64bit)_v3.07.0008.exe"
 $zebraScannerInstallerPath = Join-Path -Path $zebraScannerInstallFolder -ChildPath $zebraScannerInstallerName
 $zebraScannerSilentConfigPath = Join-Path -Path $zebraScannerInstallFolder -ChildPath "customsetup.iss"
+$zebraScannerJavaPOSBinPath = "C:\Program Files\Zebra Technologies\Barcode Scanners\Scanner SDK\JPOS\bin"
 
 # Define the DLL copying paths
 $sourceDirectory = "C:\Program Files\EPSON\JavaPOS\bin"
@@ -722,6 +723,17 @@ function Install-ZebraScannerSDK {
 
     if ($process.ExitCode -ne 0) {
         throw "Zebra Scanner SDK installer exited with code $($process.ExitCode)."
+    }
+
+    $currentMachinePath = [System.Environment]::GetEnvironmentVariable('Path', [System.EnvironmentVariableTarget]::Machine)
+
+    if ($currentMachinePath -notlike "*$zebraScannerJavaPOSBinPath*") {
+        $newPathValue = "$currentMachinePath;$zebraScannerJavaPOSBinPath"
+        [System.Environment]::SetEnvironmentVariable('Path', $newPathValue, [System.EnvironmentVariableTarget]::Machine)
+        $env:Path = $newPathValue
+        Write-Output "Zebra Scanner JavaPOS path added to PATH."
+    } else {
+        Write-Output "Zebra Scanner JavaPOS path is already in PATH."
     }
 
     Write-Output "Zebra Scanner SDK installation completed successfully."
