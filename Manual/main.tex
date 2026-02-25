@@ -365,6 +365,32 @@ Figura~\ref{fig:supervisor-codigo-acesso}.
     \label{fig:supervisor-codigo-acesso}
 \end{figure}
 
+\subsection{Emissão de Talões}
+
+Todas as funções de Multibanco que impliquem emissão de comprovativo
+originam automaticamente a impressão do respetivo talão.
+
+\subsubsection{Comportamento Geral}
+
+\begin{itemize}
+    \item Sempre que o terminal devolva comprovativo de operação,
+    o POS inicia automaticamente o processo de impressão.
+    \item A impressão é realizada na impressora selecionada pelo operador.
+    \item Caso não exista impressora configurada ou disponível,
+    o sistema apresenta mensagem de erro.
+    \item Mesmo em caso de erro de impressão,
+    o talão fica disponível para consulta na função
+    \textit{Ver impressões}.
+\end{itemize}
+
+\subsubsection{Rastreabilidade}
+
+\begin{itemize}
+    \item Todos os talões emitidos ficam registados no sistema.
+    \item É possível consultar e reimprimir talões através do menu:
+    Funções $\rightarrow$ Ver impressões.
+\end{itemize}
+
 \subsection{Comando genérico -- Execução manual}
 
 A opção \textbf{IngelinkP Comando genérico Execução manual} permite ao
