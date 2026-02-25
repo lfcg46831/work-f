@@ -203,11 +203,29 @@ Figura~\ref{fig:venda-passo2-valor-multibanco}.
 
 \subsubsection{Passo 3 – Envio do valor ao terminal}
 
-Após a confirmação do valor, o POS envia automaticamente o montante ao terminal.
+Após a confirmação do valor, o POS envia automaticamente o montante ao terminal
+e apresenta a modal de comunicação com o terminal, conforme a
+Figura~\ref{fig:venda-passo3-comunicacao-terminal}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/comunicacao_terminal.png}
+    \caption{Modal apresentada durante a comunicação entre o POS e o terminal}
+    \label{fig:venda-passo3-comunicacao-terminal}
+\end{figure}
 
 \subsubsection{Passo 4 – Confirmação da transação}
 
 Após confirmação no terminal, o POS recebe a resposta da transação.
+Quando o pagamento é efetuado com sucesso, o POS apresenta a modal ilustrada
+na Figura~\ref{fig:venda-passo4-sucesso-multibanco}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/sucesso_multibanco.png}
+    \caption{Modal apresentada após pagamento Multibanco efetuado com sucesso}
+    \label{fig:venda-passo4-sucesso-multibanco}
+\end{figure}
 
 \subsubsection{Passo 5 – Tratamento de erro no terminal}
 
