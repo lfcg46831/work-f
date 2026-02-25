@@ -643,6 +643,61 @@ função utilizado para este acesso no menu \textbf{Funções}.
     \label{fig:supervisor-consulta-saldo-menu}
 \end{figure}
 
+Ao abrir a operação, o POS apresenta o ecrã de parametrização da consulta de
+saldo, conforme ilustrado na Figura~\ref{fig:supervisor-consulta-saldo-parametros}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{images/consulta_saldo.png}
+    \caption{Consulta de saldo com os parâmetros disponíveis para execução}
+    \label{fig:supervisor-consulta-saldo-parametros}
+\end{figure}
+
+Este comando suporta os seguintes parâmetros:
+
+\begin{itemize}
+    \item \textbf{Montante}
+    \item \textbf{Mostrar mensagem}
+    \item \textbf{Tecla de confirmação}
+    \item \textbf{Tipo de ecrã}
+    \item \textbf{Tempo limite em segundos}
+\end{itemize}
+
+No comando \textbf{Consulta de saldo}, estes campos do POS mapeiam para os
+parâmetros IngelinkP da seguinte forma:
+
+\begin{longtable}{|p{5cm}|p{7cm}|}
+\hline
+\textbf{Campo no POS} & \textbf{Parâmetro IngelinkP} \\
+\hline
+Montante & \texttt{Amount} \\
+\hline
+Mostrar mensagem & \texttt{display message} \\
+\hline
+Tecla de confirmação & \texttt{enable/disable green/red key} \\
+\hline
+Tipo de ecrã & \texttt{screen number} \\
+\hline
+Tempo limite em segundos & \texttt{timeout in seconds} \\
+\hline
+\end{longtable}
+
+De acordo com a especificação IngelinkP para \textit{Display Request} (serviço
+\texttt{0}), os parâmetros são codificados em \texttt{ExtraData} no formato
+\texttt{xxxxxxxxxxxxxxttsskk}, em que:
+
+\begin{itemize}
+    \item \texttt{xxxxxxxxxxxxxx}: define o parâmetro \textbf{mostrar mensagem}.
+    \item \texttt{tt}: define o \textbf{tempo limite em segundos}.
+    \item \texttt{ss}: define o \textbf{tipo de ecrã} (número do ecrã).
+    \item \texttt{kk}: define a \textbf{tecla de confirmação} (teclas verde/vermelha):
+    \begin{itemize}
+        \item \texttt{10}: ativa apenas a tecla verde.
+        \item \texttt{01}: ativa apenas a tecla vermelha.
+        \item \texttt{11}: ativa ambas as teclas.
+    \end{itemize}
+\end{itemize}
+
 % -------------------------------------------------
 \section{Tratamento de Erros}
 
