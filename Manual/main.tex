@@ -177,6 +177,13 @@ com envio automático do montante a partir do POS.
 
 \subsection{Fluxo da Operação}
 
+No fluxo 
+\textbf{normal} de pagamento Multibanco, a operação termina no
+\textbf{Passo 4 – Confirmação da transação}.
+
+Os Passos 5 e 6 descrevem \textbf{situações de exceção}, apresentadas apenas
+quando existem erros de impressão no POS ou erros devolvidos pelo terminal.
+
 \subsubsection{Passo 1 – Seleção da forma de pagamento}
 
 O operador seleciona a opção Multibanco como forma de pagamento.
@@ -236,7 +243,7 @@ Figura~\ref{fig:venda-passo4-selecao-impressora}.
     \label{fig:venda-passo4-selecao-impressora}
 \end{figure}
 
-\subsubsection{Passo 5 – Tratamento de erro de impressora no POS}
+\subsubsection{Passo 5 (Exceção) – Tratamento de erro de impressora no POS}
 
 Caso não exista nenhuma impressora ligada ao POS, o sistema pode apresentar a
 modal de erro ilustrada na Figura~\ref{fig:venda-passo5-erro-impressora}.
@@ -269,7 +276,7 @@ Figura~\ref{fig:venda-passo5-ver-impressoes}.
     \label{fig:venda-passo5-ver-impressoes}
 \end{figure}
 
-\subsubsection{Passo 6 – Tratamento de erro no terminal}
+\subsubsection{Passo 6 (Exceção) – Tratamento de erro no terminal}
 
 Ao selecionar o valor a pagar em Multibanco e clicar em \textbf{Confirmar},
 caso o terminal devolva erro, o POS apresenta a modal de erro ilustrada na
