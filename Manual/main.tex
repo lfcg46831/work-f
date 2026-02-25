@@ -236,11 +236,27 @@ Figura~\ref{fig:venda-passo4-selecao-impressora}.
     \label{fig:venda-passo4-selecao-impressora}
 \end{figure}
 
-\subsubsection{Passo 5 – Tratamento de erro no terminal}
+\subsubsection{Passo 5 – Tratamento de erro de impressora no POS}
+
+Caso não exista nenhuma impressora ligada ao POS, o sistema pode apresentar a
+modal de erro ilustrada na Figura~\ref{fig:venda-passo5-erro-impressora}.
+
+Nesta situação, o operador deve clicar em \textbf{OK} para continuar a
+operação. Os talões ficam disponíveis na função \textbf{Ver impressões}, no
+menu \textbf{Funções}, após a venda terminar.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/erro_impressora.png}
+    \caption{Modal apresentada quando não existe impressora ligada ao POS}
+    \label{fig:venda-passo5-erro-impressora}
+\end{figure}
+
+\subsubsection{Passo 6 – Tratamento de erro no terminal}
 
 Ao selecionar o valor a pagar em Multibanco e clicar em \textbf{Confirmar},
 caso o terminal devolva erro, o POS apresenta a modal de erro ilustrada na
-Figura~\ref{fig:venda-passo5-erro-multibanco}.
+Figura~\ref{fig:venda-passo6-erro-multibanco}.
 
 Nesta modal, o operador pode:
 
@@ -253,7 +269,7 @@ Nesta modal, o operador pode:
     \centering
     \includegraphics[width=0.85\textwidth]{images/erro_multibanco.png}
     \caption{Modal apresentada quando ocorre erro no terminal Multibanco}
-    \label{fig:venda-passo5-erro-multibanco}
+    \label{fig:venda-passo6-erro-multibanco}
 \end{figure}
 
 \subsection{Resultado Esperado}
