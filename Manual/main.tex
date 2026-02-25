@@ -391,6 +391,77 @@ originam automaticamente a impressão do respetivo talão.
     Funções $\rightarrow$ Ver impressões.
 \end{itemize}
 
+\subsection{Estrutura do Resultado das Operações Multibanco}
+
+Todas as funções de Multibanco apresentam um ecrã de resultado padronizado
+após a execução da operação.
+
+\subsubsection{Modelo de Resultado}
+
+O ecrã de resultado contém os seguintes campos:
+
+\begin{itemize}
+    \item \textbf{Resultado (Geral)}
+    \item \textbf{Estado}
+    \item \textbf{Erro}
+    \item \textbf{Mensagem}
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/resultado_sucesso.png}
+    \caption{Exemplo de resultado de operação Multibanco com sucesso}
+    \label{fig:resultado-multibanco-sucesso}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/resultado_erro.png}
+    \caption{Exemplo de resultado de operação Multibanco com erro geral}
+    \label{fig:resultado-multibanco-erro}
+\end{figure}
+
+\subsubsection{Descrição dos Campos}
+
+\paragraph{Resultado (Geral)}
+
+Indica o resultado da chamada à camada de abstração de pagamentos
+(utilizada pelo POS para comunicar com o terminal).
+
+\begin{itemize}
+    \item \textbf{Success!} -- A chamada foi executada com sucesso.
+    \item \textbf{ERROR!} -- Ocorreu erro na comunicação ou execução técnica.
+\end{itemize}
+
+Nota: Este campo \textbf{não está diretamente relacionado com a resposta da
+IngelinkP}, mas sim com o sucesso da invocação do serviço de pagamento.
+
+\paragraph{Estado}
+
+Indica o estado devolvido pelo método de pagamento específico
+(neste caso, IngelinkP).
+
+Pode assumir valores como:
+
+\begin{itemize}
+    \item Success
+    \item Outros estados indicativos de erro ou rejeição
+\end{itemize}
+
+\paragraph{Erro}
+
+Este campo é preenchido apenas quando o
+\textbf{Resultado (Geral)} é \textbf{ERROR!}.
+
+Contém a descrição técnica do erro ocorrido.
+
+\paragraph{Mensagem}
+
+Contém informação detalhada sobre o \textbf{Estado}
+devolvido pelo método de pagamento.
+
+Exemplo: \textit{Estado de sucesso.}
+
 \subsection{Comando genérico -- Execução manual}
 
 A opção \textbf{IngelinkP Comando genérico Execução manual} permite ao
