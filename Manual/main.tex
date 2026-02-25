@@ -209,6 +209,26 @@ Após a confirmação do valor, o POS envia automaticamente o montante ao termin
 
 Após confirmação no terminal, o POS recebe a resposta da transação.
 
+\subsubsection{Passo 5 – Tratamento de erro no terminal}
+
+Ao selecionar o valor a pagar em Multibanco e clicar em \textbf{Confirmar},
+caso o terminal devolva erro, o POS apresenta a modal de erro ilustrada na
+Figura~\ref{fig:venda-passo5-erro-multibanco}.
+
+Nesta modal, o operador pode:
+
+\begin{itemize}
+    \item Alterar o tipo de pagamento
+    \item Tentar novamente a operação
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/erro_multibanco.png}
+    \caption{Modal apresentada quando ocorre erro no terminal Multibanco}
+    \label{fig:venda-passo5-erro-multibanco}
+\end{figure}
+
 \subsection{Resultado Esperado}
 
 \begin{itemize}
