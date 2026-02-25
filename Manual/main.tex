@@ -365,6 +365,33 @@ Figura~\ref{fig:supervisor-codigo-acesso}.
     \label{fig:supervisor-codigo-acesso}
 \end{figure}
 
+\subsection{Interface de Execução das Funções Multibanco}
+
+Todas as funções de Multibanco apresentam um teclado virtual no ecrã,
+independentemente de a função suportar ou não parâmetros.
+
+O teclado inclui:
+
+\begin{itemize}
+    \item Botão \textit{Voltar}, no canto inferior esquerdo, para regressar ao menu anterior
+    \item Botão \textit{Enviar}, no canto inferior direito, para submeter o comando ao terminal
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/teclado_funcoes_multibanco.png}
+    \caption{Teclado virtual comum às funções de Multibanco, com opções \textit{Voltar} e \textit{Enviar}}
+    \label{fig:teclado-funcoes-mb}
+\end{figure}
+
+\subsection{Resultado Esperado}
+
+\begin{itemize}
+    \item Interface consistente entre todas as funções de Multibanco
+    \item Submissão explícita do comando ao terminal através de \textit{Enviar}
+    \item Possibilidade de cancelamento/retorno através de \textit{Voltar}
+\end{itemize}
+
 \subsection{Emissão de Talões}
 
 Todas as funções de Multibanco que impliquem emissão de comprovativo
