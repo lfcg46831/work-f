@@ -390,6 +390,33 @@ seguintes parâmetros disponíveis:
     \item \textbf{Dados Adicionais}
 \end{itemize}
 
+No comando genérico, estes campos do POS mapeiam para os parâmetros da
+Ingelink da seguinte forma:
+
+\begin{longtable}{|p{5cm}|p{7cm}|}
+\hline
+\textbf{Campo no POS} & \textbf{Parâmetro Ingelink} \\
+\hline
+Código da Operação & \texttt{OperationType} \\
+\hline
+Serviço & \texttt{Service} \\
+\hline
+Montante & \texttt{Amount} \\
+\hline
+Dados Adicionais & \texttt{ExtraData} \\
+\hline
+\end{longtable}
+
+De acordo com a documentação da Ingelink, os parâmetros usados por esta
+operação têm o seguinte significado:
+
+\begin{itemize}
+    \item \texttt{OperationType}: código da transação solicitada ao PINPad.
+    \item \texttt{Service}: \texttt{0} operação normal; \texttt{1} operação fuel; \texttt{2} operação MBWay.
+    \item \texttt{Amount}: valor da transação sem separador decimal (ASCII \texttt{0..0} quando não aplicável).
+    \item \texttt{ExtraData}: dados adicionais exigidos por algumas transações (ASCII \texttt{0..0} quando não aplicável).
+\end{itemize}
+
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\textwidth]{images/ingelink_execucao_manual.png}
