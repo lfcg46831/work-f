@@ -713,6 +713,39 @@ utilizado para aceder a esta operação no menu \textbf{Funções}.
     \label{fig:supervisor-teste-comunicacao-menu}
 \end{figure}
 
+Ao abrir a operação, o POS apresenta o ecrã de parametrização do teste de
+comunicação, conforme ilustrado na Figura~\ref{fig:supervisor-teste-comunicacao-parametros}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{images/teste_comunicacao.png}
+    \caption{Teste de comunicação com o parâmetro \textbf{Tipo de serviço}}
+    \label{fig:supervisor-teste-comunicacao-parametros}
+\end{figure}
+
+Este comando suporta o parâmetro \textbf{Tipo de serviço}.
+
+No comando \textbf{Teste de comunicação}, o campo do POS mapeia para o
+parâmetro IngelinkP da seguinte forma:
+
+\begin{longtable}{|p{5cm}|p{7cm}|}
+\hline
+\textbf{Campo no POS} & \textbf{Parâmetro IngelinkP} \\
+\hline
+Tipo de serviço & \texttt{Service} \\
+\hline
+\end{longtable}
+
+De acordo com a especificação IngelinkP, para o comando
+\textit{Communication Test} (\texttt{OperationType C}), o parâmetro
+\texttt{Service} pode assumir os seguintes valores:
+
+\begin{itemize}
+    \item \texttt{0}: \textit{Communication Test};
+    \item \texttt{1}: \textit{Communication Test};
+    \item \texttt{2}: \textit{MBWay Communication Test}.
+\end{itemize}
+
 % -------------------------------------------------
 \section{Tratamento de Erros}
 
