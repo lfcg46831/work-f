@@ -865,7 +865,69 @@ Figura~\ref{fig:supervisor-imprimir-dados-locais}.
     \label{fig:supervisor-imprimir-dados-locais}
 \end{figure}
 
-Este comando não contém parâmetros.
+Este comando suporta o parâmetro \textbf{Subfunção imprimir dados locais}.
+
+No comando \textbf{Imprimir dados locais}, o campo do POS mapeia para o
+parâmetro IngelinkP da seguinte forma:
+
+\begin{longtable}{|p{5cm}|p{7cm}|}
+\hline
+\textbf{Campo no POS} & \textbf{Parâmetro IngelinkP} \\
+\hline
+Subfunção imprimir dados locais & \texttt{ExtraData} (1.º byte) \\
+\hline
+\end{longtable}
+
+De acordo com a especificação IngelinkP, para o comando
+\textit{Print Local Data} (\texttt{OperationType L}), o primeiro byte de
+\texttt{ExtraData} deve conter o identificador da subfunção pretendida e os
+restantes bytes devem ser preenchidos a zero.
+
+Os valores suportados para a subfunção são:
+
+\begin{longtable}{|p{2.2cm}|p{9.8cm}|}
+\hline
+\textbf{Valor} & \textbf{Descrição} \\
+\hline
+\texttt{0x00} & Terminal/Merchant Parameters \\
+\hline
+\texttt{0x01} & Communication Parameters \\
+\hline
+\texttt{0x02} & Payment System Keys \\
+\hline
+\texttt{0x03} & Payment System Parameters \\
+\hline
+\texttt{0x04} & Supported Applications Parameters \\
+\hline
+\texttt{0x05} & Card Allowed Operations \\
+\hline
+\texttt{0x06} & Ingelink-P Private Label BIN List \\
+\hline
+\texttt{0x07} & Ingelink-P Private Label Payment Codes \\
+\hline
+\texttt{0x08} & SIBS Private Label Accepted BINs \\
+\hline
+\texttt{0x09} & SIBS Private Label Payment Codes \\
+\hline
+\texttt{0x0A} & SIBS Payment Codes Per BIN \\
+\hline
+\texttt{0x0B} & Contactless Parameters \\
+\hline
+\texttt{0x0C} & MBSpot Payment Parameters \\
+\hline
+\texttt{0x0D} & Software Download Related Data \\
+\hline
+\texttt{0x0E} & Software Authentication Related Data \\
+\hline
+\texttt{0x0F} & On Us BINs \\
+\hline
+\texttt{0x10} & Credit Entities \\
+\hline
+\texttt{0x11} & MBSpot Payment Sectors \\
+\hline
+\texttt{0x12} & Helpdesk Ticket v1 \\
+\hline
+\end{longtable}
 
 \subsection{Teste de comunicação}
 
