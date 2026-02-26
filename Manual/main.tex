@@ -1240,7 +1240,29 @@ função utilizado para este acesso no menu \textbf{Funções}.
     \label{fig:supervisor-atualizacao-software-menu}
 \end{figure}
 
-Esta operação não contém parâmetros de configuração no POS.
+Este comando suporta os seguintes parâmetros:
+
+\begin{itemize}
+    \item \textbf{Tipo de atualização de software}
+    \item \textbf{Tempo limite em segundos}
+\end{itemize}
+
+No comando \textbf{Atualização de software}, os campos do POS mapeiam para os
+parâmetros IngelinkP da seguinte forma:
+
+\begin{longtable}{|p{5cm}|p{7cm}|}
+\hline
+\textbf{Campo no POS} & \textbf{Parâmetro IngelinkP} \\
+\hline
+Tipo de atualização de software & \texttt{software update type} \\
+\hline
+Tempo limite em segundos & \texttt{timeout in seconds} \\
+\hline
+\end{longtable}
+
+De acordo com a especificação técnica da IngelinkP para \textit{Software
+Update} (\texttt{Op Type c}, serviço \texttt{0}), o campo \texttt{ExtraData}
+transporta o tipo de atualização e o tempo limite configurado para a operação.
 
 % -------------------------------------------------
 \section{Tratamento de Erros}
