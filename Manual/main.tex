@@ -725,6 +725,33 @@ Figura~\ref{fig:supervisor-confirmar-impressao-recibo}.
     \label{fig:supervisor-confirmar-impressao-recibo}
 \end{figure}
 
+Este comando suporta os parâmetros \textbf{Tipo de serviço} e
+\textbf{Índice de registos offline}.
+
+No comando \textbf{Confirmar impressão do recibo}, os campos do POS mapeiam
+para os parâmetros IngelinkP da seguinte forma:
+
+\begin{longtable}{|p{5cm}|p{7cm}|}
+\hline
+\textbf{Campo no POS} & \textbf{Parâmetro IngelinkP} \\
+\hline
+Tipo de serviço & \texttt{Service} \\
+\hline
+Índice de registos offline & \texttt{ExtraData} (\texttt{yyy000...}) \\
+\hline
+\end{longtable}
+
+De acordo com a especificação IngelinkP para \textit{Confirm Ticket Printing}
+(\texttt{OperationType J}), aplica-se:
+
+\begin{itemize}
+    \item \texttt{Service}: \texttt{0} para confirmação normal de impressão; \texttt{1}
+    para confirmação associada a registos offline.
+    \item \texttt{ExtraData}: quando \texttt{Service=1}, os 3 primeiros dígitos
+    (\texttt{yyy}) representam o índice de registo offline; \texttt{yyy=000}
+    elimina todos os registos offline pendentes.
+\end{itemize}
+
 \subsection{Teste de comunicação}
 
 A opção \textbf{Teste de comunicação} permite ao supervisor validar a
