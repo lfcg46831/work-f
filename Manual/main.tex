@@ -1028,7 +1028,35 @@ função utilizado para este acesso no menu \textbf{Funções}.
     \label{fig:supervisor-inquerito-satisfacao-menu}
 \end{figure}
 
-Esta operação não contém parâmetros.
+Este comando suporta os seguintes parâmetros:
+
+\begin{itemize}
+    \item \textbf{Ecrãs de inquérito}
+    \item \textbf{Tempo limite em segundos}
+    \item \textbf{Tipo de pagamento}
+    \item \textbf{Carimbo de data/hora da compra}
+\end{itemize}
+
+No comando \textbf{Inquérito de satisfação}, estes campos do POS mapeiam para
+os parâmetros IngelinkP da seguinte forma:
+
+\begin{longtable}{|p{5cm}|p{7cm}|}
+\hline
+\textbf{Campo no POS} & \textbf{Parâmetro IngelinkP} \\
+\hline
+Ecrãs de inquérito & \texttt{survey screens} \\
+\hline
+Tempo limite em segundos & \texttt{timeout in seconds} \\
+\hline
+Tipo de pagamento & \texttt{payment type} \\
+\hline
+Carimbo de data/hora da compra & \texttt{purchase date/time stamp} \\
+\hline
+\end{longtable}
+
+De acordo com a especificação técnica da IngelinkP para \textit{Show Survey}
+(\texttt{Op Type x}, serviço \texttt{1}), os parâmetros são codificados no
+campo \texttt{ExtraData}.
 
 \subsection{Ler faixa magnética}
 
