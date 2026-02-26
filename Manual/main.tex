@@ -994,6 +994,50 @@ utilizado para este acesso no menu \textbf{Funções}.
 
 Este comando não contém parâmetros.
 
+\subsection{Ler faixa magnética}
+
+A opção \textbf{Ler faixa magnética} permite ao supervisor iniciar, a partir
+do menu de funções de Multibanco, a leitura de um cartão de comerciante
+através da faixa magnética.
+
+A Figura~\ref{fig:supervisor-ler-faixa-magnetica-menu} mostra o botão de
+função utilizado para este acesso no menu \textbf{Funções}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/funcoes_multibanco_ler_faixa_magnetica.png}
+    \caption{Opção \textbf{Ler faixa magnética} no menu de funções Multibanco}
+    \label{fig:supervisor-ler-faixa-magnetica-menu}
+\end{figure}
+
+Este comando suporta os parâmetros \textbf{Mostrar mensagem} e
+\textbf{Tempo limite em segundos}.
+
+No comando \textbf{Ler faixa magnética}, os campos do POS mapeiam para os
+parâmetros IngelinkP da seguinte forma:
+
+\begin{longtable}{|p{5cm}|p{7cm}|}
+\hline
+\textbf{Campo no POS} & \textbf{Parâmetro IngelinkP} \\
+\hline
+Mostrar mensagem & \texttt{display message} \\
+\hline
+Tempo limite em segundos & \texttt{timeout in seconds} \\
+\hline
+\end{longtable}
+
+De acordo com a especificação IngelinkP para \textit{Read Merchant Card}
+(\texttt{OperationType M}, serviço \texttt{0}), o campo \texttt{ExtraData}
+deve ser codificado no formato \texttt{xxxxxxxxxxxxxxtt0000}, em que:
+
+\begin{itemize}
+    \item \texttt{xxxxxxxxxxxxxx}: define a \textbf{mensagem apresentada}.
+    \item \texttt{tt}: define o \textbf{tempo limite em segundos}.
+\end{itemize}
+
+Neste comando, o parâmetro \texttt{Amount} deve ser preenchido com
+\texttt{000000000}.
+
 \subsection{Imprimir registos offline}
 
 A opção \textbf{Imprimir registos offline} permite ao supervisor executar,
