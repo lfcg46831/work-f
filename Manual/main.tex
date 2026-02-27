@@ -14,6 +14,7 @@
 \usepackage{xcolor}
 
 \geometry{margin=2.5cm}
+\setlength{\headheight}{14.5pt}
 
 % Metadados do documento (preencher)
 \newcommand{\DocVersion}{1.0}
@@ -969,8 +970,8 @@ Tipo de serviço & \texttt{Service} \\
 \hline
 \end{longtable}
 
-De acordo com a especificação IngelinkP para \textit{Confirm Ticket Printing}
-(\texttt{OperationType j}), aplica-se:
+De acordo com a especificação IngelinkP para \textit{Confirm Ticket Printing}\allowbreak\allowbreak
+(\texttt{OperationType}\allowbreak\texttt{ j}), aplica-se:
 
 \begin{itemize}
     \item \texttt{Service}: \texttt{0} para confirmação normal de impressão; \texttt{1}
@@ -1020,10 +1021,10 @@ Subfunção imprimir dados locais & \texttt{ExtraData} (1.º byte) \\
 \hline
 \end{longtable}
 
-De acordo com a especificação IngelinkP, para o comando
-\textit{Print Local Data} (\texttt{OperationType L}), o primeiro byte de
-\texttt{ExtraData} deve conter o identificador da subfunção pretendida e os
-restantes bytes devem ser preenchidos a zero.
+De acordo com a especificação IngelinkP, no comando
+\textit{Print Local Data} (\texttt{OperationType\allowbreak\ L}), o primeiro
+byte de \texttt{ExtraData} contém o identificador da subfunção pretendida; os
+restantes bytes são preenchidos a zero.
 
 Os valores suportados para a subfunção são:
 
