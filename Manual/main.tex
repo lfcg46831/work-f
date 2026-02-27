@@ -25,7 +25,7 @@
 \newcommand{\TPAFirmware}{<preencher>}
 
 \title{Manual de Certificação\\Funções Multibanco no POS}
-\author{Luís Gomes}
+\author{Fujitsu}
 \date{Fevereiro 2026}
 
 % Cabeçalho/Rodapé
@@ -56,7 +56,6 @@ dos fluxos descritos.
   \item Ambiente: \Environment
   \item Modelo do TPA: \TPAModel
   \item Firmware do TPA: \TPAFirmware
-  \item Tipo de comunicação: <preencher>
 \end{itemize}
 
 % -------------------------------------------------
@@ -113,16 +112,16 @@ pagamentos, como apresentado na Figura~\ref{fig:selecao-pagamento}.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{images/pesquisa_por_nome.png}
-    \caption{Ecrã apresentado após selecionar \textbf{Pesquisa por nome}}
-    \label{fig:pesquisa-por-nome}
+    \includegraphics[width=0.85\textwidth]{images/identificacao_cliente.png}
+    \caption{Página de identificação do cliente após login do operador}
+    \label{fig:identificacao-cliente}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{images/identificacao_cliente.png}
-    \caption{Página de identificação do cliente após login do operador}
-    \label{fig:identificacao-cliente}
+    \includegraphics[width=0.85\textwidth]{images/pesquisa_por_nome.png}
+    \caption{Ecrã apresentado após selecionar \textbf{Pesquisa por nome}}
+    \label{fig:pesquisa-por-nome}
 \end{figure}
 
 \begin{figure}[H]
@@ -336,6 +335,7 @@ imprime o \textbf{talão de recuperação}.
 \subsection{Descrição}
 
 A operação de devolução permite reembolsar uma transação previamente efetuada.
+Esta função pode ser acedida a partir da página de identificação do cliente.
 
 Para realizar uma devolução, deve-se clicar em \textbf{Devoluções} no menu de
 \textbf{Funções}, conforme apresentado na
@@ -556,6 +556,7 @@ Nesta situação, o operador pode:
 As funções de supervisor de Multibanco são acedidas através do menu
 \textbf{Funções}, selecionando a opção \textbf{Funções de Multibanco},
 conforme apresentado na Figura~\ref{fig:supervisor-menu-funcoes-multibanco}.
+Estas funções podem ser acedidas a partir da página de identificação do cliente.
 
 O acesso a qualquer uma das funções de supervisor do Multibanco exige a
 introdução de credenciais de supervisor, conforme apresentado na
@@ -1544,16 +1545,5 @@ Tempo limite em segundos & \texttt{timeout in seconds} \\
 De acordo com a especificação técnica da IngelinkP para \textit{Software
 Update} (\texttt{Op Type c}, serviço \texttt{0}), o campo \texttt{ExtraData}
 transporta o tipo de atualização e o tempo limite configurado para a operação.
-
-% -------------------------------------------------
-\section{Tratamento de Erros}
-
-\begin{longtable}{|p{3cm}|p{5cm}|p{5cm}|}
-\hline
-Código & Descrição & Comportamento do POS \\
-\hline
- & & \\
-\hline
-\end{longtable}
 
 \end{document}
