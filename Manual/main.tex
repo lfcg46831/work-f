@@ -530,6 +530,24 @@ Tal como na venda, o talão fica disponível para consulta na função
     \label{fig:devolucao-passo6-erro-impressao}
 \end{figure}
 
+\subsubsection{Passo 7 (Exceção) – Tratamento de erro no terminal durante a devolução}
+
+Caso ocorra um erro devolvido pelo terminal durante o processo de devolução,
+o POS apresenta a mensagem ilustrada na Figura~\ref{fig:devolucao-passo7-erro-terminal}.
+
+Nesta situação, o operador pode:
+\begin{itemize}
+    \item \textbf{Alterar reembolso}, para regressar ao fluxo e ajustar os dados da devolução;
+    \item \textbf{Tentar novamente}, para repetir a operação de devolução no terminal.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/devolucao_erro.png}
+    \caption{Mensagem apresentada quando ocorre erro no terminal durante a devolução}
+    \label{fig:devolucao-passo7-erro-terminal}
+\end{figure}
+
 % -------------------------------------------------
 \section{Funções Supervisor}
 
