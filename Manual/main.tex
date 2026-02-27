@@ -460,6 +460,76 @@ como apresentado na Figura~\ref{fig:devolucao-avancar}.
     \label{fig:devolucao-avancar}
 \end{figure}
 
+Após selecionar os produtos a devolver e clicar em \textbf{Avançar}, o
+operador deve escolher o tipo de pagamento \textbf{Cartão Multibanco}, conforme
+apresentado na Figura~\ref{fig:devolucao-passo1-multibanco}.
+
+De seguida, deve selecionar o valor a devolver no teclado numérico,
+conforme apresentado na Figura~\ref{fig:devolucao-passo2-valor-multibanco}.
+
+Após selecionar o valor, o POS apresenta a lista de pagamentos
+\textbf{Multibanco} efetuados na venda original para seleção da transação a
+devolver, conforme apresentado na Figura~\ref{fig:devolucao-passo3-lista-multibanco}.
+
+Depois da seleção, o POS inicia o processo de devolução com o terminal e,
+em caso de sucesso, apresenta a mensagem ilustrada na
+Figura~\ref{fig:devolucao-passo4-sucesso}.
+
+Concluída a devolução com sucesso, é apresentada a modal para seleção da
+impressora de emissão do talão de devolução, conforme a
+Figura~\ref{fig:devolucao-passo5-impressoras}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/devolucao_multibanco.png}
+    \caption{Seleção do tipo de pagamento \textbf{Cartão Multibanco} na devolução}
+    \label{fig:devolucao-passo1-multibanco}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/devolucao_multibanco_valor.png}
+    \caption{Seleção do valor a devolver em pagamento \textbf{Cartão Multibanco}}
+    \label{fig:devolucao-passo2-valor-multibanco}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/devolucao_multibanco_lista.png}
+    \caption{Lista de pagamentos Multibanco da venda original para seleção da devolução}
+    \label{fig:devolucao-passo3-lista-multibanco}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/devolucao_sucesso.png}
+    \caption{Mensagem de sucesso após conclusão da devolução no terminal}
+    \label{fig:devolucao-passo4-sucesso}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/devolucao_impressoras.png}
+    \caption{Modal para seleção da impressora do talão de devolução}
+    \label{fig:devolucao-passo5-impressoras}
+\end{figure}
+
+\subsubsection{Passo 6 (Exceção) – Tratamento de erro de impressora na devolução}
+
+Caso ocorra erro ao imprimir o talão de devolução, o sistema apresenta a
+modal ilustrada na Figura~\ref{fig:devolucao-passo6-erro-impressao}.
+
+Nesta situação, o operador deve clicar em \textbf{OK} para continuar.
+Tal como na venda, o talão fica disponível para consulta na função
+\textbf{Ver impressões}, no menu \textbf{Funções}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/devolucao_erro_impressao.png}
+    \caption{Modal apresentada quando ocorre erro de impressão do talão de devolução}
+    \label{fig:devolucao-passo6-erro-impressao}
+\end{figure}
+
 % -------------------------------------------------
 \section{Funções Supervisor}
 
