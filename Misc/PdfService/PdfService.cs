@@ -83,7 +83,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             PdfPage page = templatePage;
             var canvas = new PdfCanvas(page);
 
-            DrawTransactionBarcode(pdfDoc, canvas, font, basket);
+            DrawTransactionBarcode(pdfDoc, page, canvas, font, basket);
 
             // Desenha cabeçalho na primeira página
             DrawHeader(canvas, font, boldFont, store, op, basket, isReturn, isDuplicate, pageIndex);
@@ -247,6 +247,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
                     // Desenha cabeçalho
                     DrawHeader(canvas, font, boldFont, store, op, basket, isReturn, isDuplicate, pageIndex);
+                    DrawTransactionBarcode(pdfDoc, page, canvas, font, basket);
 
                     startY = 430; // reinicia posição inicial dos artigos
 
@@ -406,7 +407,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             WriteText(canvas, font, 22, 520, 7, "ATCUD:" + atcud);
             WriteText(canvas, font, 22, 512, 7, hashCode + "-Processado por programa certificado " + certificationCode + "/AT");
 
-            if (!string.IsNullOrWhiteSpace(atcudBarcode))
+            if (pageIndex == 1 && !string.IsNullOrWhiteSpace(atcudBarcode))
             {
                 WriteQrCode(canvas, atcudBarcode, 460, 450, 100);
             }
@@ -505,7 +506,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
         }
 
-        private void DrawTransactionBarcode(PdfDocument pdfDoc, PdfCanvas canvas, PdfFont font, Basket basket)
+        private void DrawTransactionBarcode(PdfDocument pdfDoc, PdfPage page, PdfCanvas canvas, PdfFont font, Basket basket)
         {
             var totalCompanyCode = _configuration.GetValue<string>("TotalCompanyCode");
             if (string.IsNullOrWhiteSpace(totalCompanyCode))
@@ -544,7 +545,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             img.SetFixedPosition(x, y);
 
-            using var imgCanvas = new Canvas(pdfDoc.GetPage(1), pdfDoc.GetPage(1).GetPageSize());
+            using var imgCanvas = new Canvas(page, page.GetPageSize());
             imgCanvas.Add(img);
 
             WriteText(canvas, font, 422, 790, 6, transactionNumber);
@@ -729,6 +730,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
                     pageIndex++;
                     DrawHeader(canvas, font, boldFont, store, op, basket, isReturn, isDuplicate, pageIndex);
+                    DrawTransactionBarcode(pdfDoc, page, canvas, font, basket);
 
                     currentY = newPageTopY;
                 }
