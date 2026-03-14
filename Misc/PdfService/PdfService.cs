@@ -737,7 +737,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
                 if (sectionHeight > 0f)
                 {
-                    DrawFooterSectionBackground(pdfDoc, page, currentY, sectionHeight);
+                    DrawFooterSectionBackground(canvas, page, currentY, sectionHeight);
                 }
 
                 if (section.Left != null)
@@ -754,7 +754,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
         }
 
-        private static void DrawFooterSectionBackground(PdfDocument pdfDoc, PdfPage page, float topY, float sectionHeight)
+        private static void DrawFooterSectionBackground(PdfCanvas canvas, PdfPage page, float topY, float sectionHeight)
         {
             if (sectionHeight <= 0f)
                 return;
@@ -767,13 +767,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             var rectangleHeight = sectionHeight + topMargin + bottomMargin;
             var rectangleBottom = rectangleTop - rectangleHeight;
 
-            var overlayCanvas = new PdfCanvas(page.NewContentStreamAfter(), page.GetResources(), pdfDoc);
-
-            overlayCanvas.SaveState()
-                         .SetFillColor(ColorConstants.WHITE)
-                         .Rectangle(0f, rectangleBottom, pageWidth, rectangleHeight)
-                         .Fill()
-                         .RestoreState();
+            canvas.SaveState()
+                  .SetFillColor(ColorConstants.WHITE)
+                  .Rectangle(0f, rectangleBottom, pageWidth, rectangleHeight)
+                  .Fill()
+                  .RestoreState();
         }
 
         private static FooterBlock BuildInvoiceNotesBlock(string? text)
