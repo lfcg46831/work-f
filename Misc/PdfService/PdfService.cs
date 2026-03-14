@@ -687,7 +687,6 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         {
             const float leftColumnX = 50f;
             const float rightColumnX = 335f;
-            const float columnWidth = 210f;
             const float lineHeight = 8f;
             const float fontSize = 7f;
             const float sectionSpacing = 8f;
@@ -734,15 +733,18 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                     currentY = newPageTopY;
                 }
 
+                if (sectionHeight > 0f)
+                {
+                    DrawFooterSectionBackground(canvas, currentY, sectionHeight);
+                }
+
                 if (section.Left != null)
                 {
-                    DrawFooterBlockBackground(canvas, leftColumnX, currentY, section.Left.GetHeight(lineHeight), columnWidth);
                     WriteFooterBlock(canvas, font, leftColumnX, currentY, fontSize, lineHeight, section.Left);
                 }
 
                 if (section.Right != null)
                 {
-                    DrawFooterBlockBackground(canvas, rightColumnX, currentY, section.Right.GetHeight(lineHeight), columnWidth);
                     WriteFooterBlock(canvas, font, rightColumnX, currentY, fontSize, lineHeight, section.Right);
                 }
 
@@ -750,21 +752,22 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
         }
 
-        private static void DrawFooterBlockBackground(PdfCanvas canvas, float x, float topY, float blockHeight, float width)
+        private static void DrawFooterSectionBackground(PdfCanvas canvas, float topY, float sectionHeight)
         {
-            if (blockHeight <= 0f)
+            if (sectionHeight <= 0f)
                 return;
 
-            const float verticalPadding = 2f;
+            const float topMargin = 2f;
             const float bottomMargin = 3f;
 
-            var rectangleTop = topY + verticalPadding;
-            var rectangleHeight = blockHeight + verticalPadding + bottomMargin;
+            var pageWidth = canvas.GetDocument().GetDefaultPageSize().GetWidth();
+            var rectangleTop = topY + topMargin;
+            var rectangleHeight = sectionHeight + topMargin + bottomMargin;
             var rectangleBottom = rectangleTop - rectangleHeight;
 
             canvas.SaveState()
                   .SetFillColor(ColorConstants.WHITE)
-                  .Rectangle(x - 2f, rectangleBottom, width, rectangleHeight)
+                  .Rectangle(0f, rectangleBottom, pageWidth, rectangleHeight)
                   .Fill()
                   .RestoreState();
         }
