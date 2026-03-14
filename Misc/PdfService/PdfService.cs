@@ -685,8 +685,9 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             float topY,
             float bottomY)
         {
-            const float leftColumnX = 65f;
-            const float rightColumnX = 320f;
+            const float leftColumnX = 50f;
+            const float rightColumnX = 335f;
+            const float columnWidth = 210f;
             const float lineHeight = 8f;
             const float fontSize = 7f;
             const float sectionSpacing = 8f;
@@ -735,16 +736,37 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
                 if (section.Left != null)
                 {
+                    DrawFooterBlockBackground(canvas, leftColumnX, currentY, section.Left.GetHeight(lineHeight), columnWidth);
                     WriteFooterBlock(canvas, font, leftColumnX, currentY, fontSize, lineHeight, section.Left);
                 }
 
                 if (section.Right != null)
                 {
+                    DrawFooterBlockBackground(canvas, rightColumnX, currentY, section.Right.GetHeight(lineHeight), columnWidth);
                     WriteFooterBlock(canvas, font, rightColumnX, currentY, fontSize, lineHeight, section.Right);
                 }
 
                 currentY -= sectionHeight + sectionSpacing;
             }
+        }
+
+        private static void DrawFooterBlockBackground(PdfCanvas canvas, float x, float topY, float blockHeight, float width)
+        {
+            if (blockHeight <= 0f)
+                return;
+
+            const float verticalPadding = 2f;
+            const float bottomMargin = 3f;
+
+            var rectangleTop = topY + verticalPadding;
+            var rectangleHeight = blockHeight + verticalPadding + bottomMargin;
+            var rectangleBottom = rectangleTop - rectangleHeight;
+
+            canvas.SaveState()
+                  .SetFillColor(ColorConstants.WHITE)
+                  .Rectangle(x - 2f, rectangleBottom, width, rectangleHeight)
+                  .Fill()
+                  .RestoreState();
         }
 
         private static FooterBlock BuildInvoiceNotesBlock(string? text)
