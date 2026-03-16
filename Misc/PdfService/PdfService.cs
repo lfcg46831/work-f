@@ -282,18 +282,20 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                     }
                 }
             }
+
+            DrawCarriedForward(canvas, font, runningTotal);
         }
 
         private static void DrawCarriedForward(PdfCanvas canvas, PdfFont font, decimal value)
         {
             WriteText(canvas, font, 430, 80, 7, "TRANSPORTE");
-            WriteText(canvas, font, 530, 80, 7, value.ToString("0.00"));
+            WriteTextRightAligned(canvas, font, 555, 80, 7, value.ToString("0.00"));
         }
 
         private static void DrawBroughtForward(PdfCanvas canvas, PdfFont font, decimal value)
         {
             WriteText(canvas, font, 430, 540, 7, "TRANSPORTE");
-            WriteText(canvas, font, 530, 540, 7, value.ToString("0.00"));
+            WriteTextRightAligned(canvas, font, 555, 540, 7, value.ToString("0.00"));
         }
 
         private void DrawImage(PdfCanvas canvas, string path, float placeholderWidth, float placeholderHeight, float left, float bottom)
