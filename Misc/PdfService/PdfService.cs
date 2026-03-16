@@ -102,6 +102,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             var totalWithoutVat = Strings.Format((basket.BasketTotal.Total.ToFixed() - basket.BasketTotal.Vats.ToFixed()), "F2");
             var vatTotal = Strings.Format(basket.BasketTotal.Vats.ToFixed(), "F2");
             var total = Strings.Format(basket.BasketTotal.TotalToPay.ToFixed(), "F2");
+            var transportValue = basket.ArticleLines?.Sum(x => Convert.ToDecimal(x.BaseArticlePrice)) ?? 0m;
 
             RenderFooterSections(
                 pdfDoc,
@@ -119,7 +120,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 notesText,
                 basket.PaymentLines,
                 startY,
-                125f);
+                125f,
+                transportValue);
 
             WriteText(canvas, font, 250, 132, 7, volumes.ToString());
             WriteText(canvas, font, 352, 132, 7, weigthTotal.ToString() + " Kgs.");
@@ -699,7 +701,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             string invoiceNotes,
             IList<BasketPayment>? paymentLines,
             float topY,
-            float bottomY)
+            float bottomY,
+            decimal transportValue)
         {
             const float leftColumnX = 50f;
             const float rightColumnX = 335f;
@@ -739,6 +742,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
                 if (currentY - sectionHeight < bottomY)
                 {
+                    DrawCarriedForward(canvas, font, transportValue);
+
                     page = pdfDoc.AddNewPage();
                     canvas = new PdfCanvas(page);
                     canvas.AddXObjectAt(layoutBackground, 0, 0);
@@ -748,6 +753,9 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                     DrawTransactionBarcode(pdfDoc, page, canvas, font, basket);
 
                     currentY = newPageTopY;
+
+                    DrawBroughtForward(canvas, font, transportValue);
+                    currentY -= lineHeight * 2;
                 }
 
                 if (sectionHeight > 0f)
