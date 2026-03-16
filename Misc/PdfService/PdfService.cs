@@ -259,15 +259,15 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 var quantityPerVolume = article.ArticleType == (short)ArticleType.Weigth || article.Volume <= 0 ? 1 : (article.Quantity / article.Volume);
 
                 // Escreve artigo
-                WriteTextRightAligned(canvas, font, 74, startY, 7, article.InternalCode);
-                WriteTextLimited(canvas, font, 78, startY, 7, article.LongDescription, 30);
-                WriteText(canvas, font, 231, startY, 7, article.Volume.ToString());
-                WriteText(canvas, font, 258, startY, 7, quantityPerVolume.ToString());
-                WriteText(canvas, font, 313, startY, 7, article.SaleQuantity.ToString("F3"));
-                WriteText(canvas, font, 375, startY, 7, (article.NetBaseArticleUnitPrice ?? 0).ToString("F2"));
-                WriteText(canvas, font, 464, startY, 7, article.BaseArticlePrice.ToString("F2"));
-                WriteText(canvas, font, 495, startY, 7, article.ArticleVatPercentage.ToString("F1"));
-                WriteText(canvas, font, 540, startY, 7, (article.NetArticleUnitPrice ?? 0).ToString("F2"));
+                WriteTextRightAligned(canvas, font, 75, startY, 7, article.InternalCode.Trim());
+                WriteTextLimited(canvas, font, 78, startY, 7, article.LongDescription.Trim(), 30);
+                WriteTextRightAligned(canvas, font, 236, startY, 7, article.Volume.ToString());
+                WriteTextRightAligned(canvas, font, 264, startY, 7, quantityPerVolume.ToString());
+                WriteTextRightAligned(canvas, font, 335, startY, 7, article.SaleQuantity.ToString("F3"));
+                WriteTextRightAligned(canvas, font, 394, startY, 7, (article.NetBaseArticleUnitPrice ?? 0).ToString("F2"));
+                WriteTextRightAligned(canvas, font, 485, startY, 7, article.BaseArticlePrice.ToString("F2"));
+                WriteTextRightAligned(canvas, font, 510, startY, 7, article.ArticleVatPercentage.ToString("F1"));
+                WriteTextRightAligned(canvas, font, 555, startY, 7, (article.NetArticleUnitPrice ?? 0).ToString("F2"));
 
                 runningTotal += articleTotal;
 
