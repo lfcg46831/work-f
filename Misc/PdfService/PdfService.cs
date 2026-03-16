@@ -121,10 +121,10 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 startY,
                 125f);
 
-            WriteText(canvas, font, 200, 110, 7, volumes.ToString());
-            WriteText(canvas, font, 352, 110, 7, weigthTotal.ToString() + " Kgs.");
-            WriteText(canvas, font, 400, 100, 7, vatTotal);
-            WriteText(canvas, font, 433, 64, 8, total);
+            WriteText(canvas, font, 250, 132, 7, volumes.ToString());
+            WriteText(canvas, font, 352, 132, 7, weigthTotal.ToString() + " Kgs.");
+            WriteText(canvas, font, 520, 84, 7, vatTotal);
+            WriteText(canvas, font, 520, 64, 8, total);
 
             AddPaymentInformation(basket.PaymentLines, merchantReceipts);
 
@@ -207,7 +207,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
         }
 
-        private static void DrawArticles(
+        private void DrawArticles(
             PdfDocument pdfDoc,
             PdfFont font,
             PdfFont boldFont,
@@ -286,14 +286,14 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
         private static void DrawCarriedForward(PdfCanvas canvas, PdfFont font, decimal value)
         {
-            WriteText(canvas, font, 400, 145, 7, "TRANSPORTE");
-            WriteText(canvas, font, 500, 145, 7, value.ToString("0.00"));
+            WriteText(canvas, font, 430, 80, 7, "TRANSPORTE");
+            WriteText(canvas, font, 530, 80, 7, value.ToString("0.00"));
         }
 
         private static void DrawBroughtForward(PdfCanvas canvas, PdfFont font, decimal value)
         {
-            WriteText(canvas, font, 400, 445, 7, "TRANSPORTE");
-            WriteText(canvas, font, 500, 445, 7, value.ToString("0.00"));
+            WriteText(canvas, font, 430, 540, 7, "TRANSPORTE");
+            WriteText(canvas, font, 530, 540, 7, value.ToString("0.00"));
         }
 
         private void DrawImage(PdfCanvas canvas, string path, float placeholderWidth, float placeholderHeight, float left, float bottom)
@@ -759,7 +759,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             if (sectionHeight <= 0f)
                 return;
 
-            const float topMargin = 2f;
+            const float topMargin = 10f;
             const float bottomMargin = 3f;
 
             var pageWidth = page.GetPageSize().GetWidth();
