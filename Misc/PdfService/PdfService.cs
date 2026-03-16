@@ -249,7 +249,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                     DrawHeader(canvas, font, boldFont, store, op, basket, isReturn, isDuplicate, pageIndex);
                     DrawTransactionBarcode(pdfDoc, page, canvas, font, basket);
 
-                    startY = 430; // reinicia posição inicial dos artigos
+                    startY = 500; // reinicia posição inicial dos artigos
 
                     DrawBroughtForward(canvas, font, runningTotal);
 
@@ -259,11 +259,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 var quantityPerVolume = article.ArticleType == (short)ArticleType.Weigth || article.Volume <= 0 ? 1 : (article.Quantity / article.Volume);
 
                 // Escreve artigo
-                WriteText(canvas, font, 29, startY, 7, article.InternalCode);
+                WriteText(canvas, font, 25, startY, 7, article.InternalCode);
                 WriteTextLimited(canvas, font, 78, startY, 7, article.LongDescription, 30);
                 WriteText(canvas, font, 231, startY, 7, article.Volume.ToString());
-                WriteText(canvas, font, 260, startY, 7, quantityPerVolume.ToString());
-                WriteText(canvas, font, 316, startY, 7, article.SaleQuantity.ToString("F3"));
+                WriteText(canvas, font, 258, startY, 7, quantityPerVolume.ToString());
+                WriteText(canvas, font, 313, startY, 7, article.SaleQuantity.ToString("F3"));
                 WriteText(canvas, font, 375, startY, 7, (article.NetBaseArticleUnitPrice ?? 0).ToString("F2"));
                 WriteText(canvas, font, 464, startY, 7, article.BaseArticlePrice.ToString("F2"));
                 WriteText(canvas, font, 495, startY, 7, article.ArticleVatPercentage.ToString("F1"));
