@@ -259,7 +259,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 var quantityPerVolume = article.ArticleType == (short)ArticleType.Weigth || article.Volume <= 0 ? 1 : (article.Quantity / article.Volume);
 
                 // Escreve artigo
-                WriteText(canvas, font, 25, startY, 7, article.InternalCode);
+                WriteTextRightAligned(canvas, font, 74, startY, 7, article.InternalCode);
                 WriteTextLimited(canvas, font, 78, startY, 7, article.LongDescription, 30);
                 WriteText(canvas, font, 231, startY, 7, article.Volume.ToString());
                 WriteText(canvas, font, 258, startY, 7, quantityPerVolume.ToString());
@@ -574,6 +574,19 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                   .SetFontAndSize(font, fontSize)
                   .MoveText(x, y)
                   .ShowText(output)
+                  .EndText();
+        }
+
+        private static void WriteTextRightAligned(PdfCanvas canvas, PdfFont font, float rightX, float y, float fontSize, string? text)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+
+            float textWidth = font.GetWidth(text, fontSize);
+
+            canvas.BeginText()
+                  .SetFontAndSize(font, fontSize)
+                  .MoveText(rightX - textWidth, y)
+                  .ShowText(text)
                   .EndText();
         }
 
