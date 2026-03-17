@@ -28,6 +28,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         ILogger<PosStatusService> logger,
         IOperatorService operatorService,
         IStructureService structureService,
+        IVatReasonsService vatReasonsService,
         IReceiptPrintPolicy receiptPrintPolicy) : IPdfService
     {
         private sealed class FooterBlock
@@ -50,6 +51,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         private readonly ILogger<PosStatusService> _logger = logger;
         private readonly IOperatorService _operatorService = operatorService;
         private readonly IStructureService _structureService = structureService;
+        private readonly IVatReasonsService _vatReasonsService = vatReasonsService;
         private readonly IReceiptPrintPolicy _receiptPrintPolicy = receiptPrintPolicy;
 
         #region Public methods
@@ -88,7 +90,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             // Desenha cabeçalho na primeira página
             DrawHeader(canvas, font, boldFont, store, op, basket, isReturn, isDuplicate, pageIndex);
 
-            DrawArticles(pdfDoc, font, boldFont, layoutBackground, store, op, basket, isReturn, isDuplicate, ref pageIndex, ref startY, lineHeight, minY, ref page, ref canvas);
+            var transportValue = DrawArticles(pdfDoc, font, boldFont, layoutBackground, store, op, basket, isReturn, isDuplicate, ref pageIndex, ref startY, lineHeight, minY, ref page, ref canvas);
 
             startY -= lineHeight;
 
@@ -102,7 +104,6 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             var totalWithoutVat = Strings.Format((basket.BasketTotal.Total.ToFixed() - basket.BasketTotal.Vats.ToFixed()), "F2");
             var vatTotal = Strings.Format(basket.BasketTotal.Vats.ToFixed(), "F2");
             var total = Strings.Format(basket.BasketTotal.TotalToPay.ToFixed(), "F2");
-            var transportValue = basket.ArticleLines?.Sum(x => Convert.ToDecimal(x.BaseArticlePrice)) ?? 0m;
 
             RenderFooterSections(
                 pdfDoc,
@@ -123,10 +124,19 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 125f,
                 transportValue);
 
-            WriteText(canvas, font, 250, 132, 7, volumes.ToString());
-            WriteText(canvas, font, 352, 132, 7, weigthTotal.ToString() + " Kgs.");
-            WriteText(canvas, font, 520, 84, 7, vatTotal);
-            WriteText(canvas, font, 520, 64, 8, total);
+            AddResumeVat(canvas, font, lineHeight, basket.VatLines);
+
+            WriteTextRightAligned(canvas, font, 260, 132, 7, volumes.ToString());
+            WriteTextRightAligned(canvas, font, 393, 132, 7, weigthTotal.ToString() + " Kgs.");
+
+            WriteText(canvas, font, 430, 114, 7, "Mercadoria");
+            WriteTextRightAligned(canvas, font, 555, 114, 7, transportValue.ToFixed().ToString("F2"));
+
+            WriteText(canvas, font, 430, 94, 7, "Imposto");
+            WriteTextRightAligned(canvas, font, 555, 94, 7, vatTotal);
+
+            WriteText(canvas, boldFont, 430, 74, 8, "Total");
+            WriteTextRightAligned(canvas, boldFont, 560, 74, 8, total);
 
             AddPaymentInformation(basket.PaymentLines, merchantReceipts);
 
@@ -209,7 +219,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
         }
 
-        private void DrawArticles(
+        private decimal DrawArticles(
             PdfDocument pdfDoc,
             PdfFont font,
             PdfFont boldFont,
@@ -286,6 +296,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
 
             DrawCarriedForward(canvas, font, runningTotal);
+
+            return runningTotal;
         }
 
         private static void DrawCarriedForward(PdfCanvas canvas, PdfFont font, decimal value)
@@ -359,10 +371,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             var storeAddress = store.PostalCodeAddress;
             var storePhoneNumber = string.Empty;
 
-            var zoneInternalCode = string.Empty;
             var payerInternalCode = basket.CustomerFinanceInformation.InternalCode;
             var operatorInternalCode = op.Code;
-            var vendorInternalCode = "88.888";
 
             var charge = $"{(string.IsNullOrWhiteSpace(store.Address1) ? "" : store.Address1 + ", ")}" +
                 $"{(string.IsNullOrWhiteSpace(store.Address2) ? "" : store.Address2 + ", ")}" +
@@ -396,10 +406,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             WriteText(canvas, font, 45, 655, 8, storeAddress);
             WriteText(canvas, font, 45, 645, 8, $"Telef.Nr.  {storePhoneNumber}");
 
-            WriteText(canvas, font, 22, 596, 7, "Zona : " + zoneInternalCode);
-            WriteText(canvas, font, 70, 596, 7, "- Cliente : " + payerInternalCode);
+            WriteText(canvas, font, 22, 596, 7, "Cliente : " + payerInternalCode);
             WriteText(canvas, font, 22, 585, 7, "Oper : " + operatorInternalCode);
-            WriteText(canvas, font, 70, 585, 7, "- Vended. : " + vendorInternalCode);
 
             WriteText(canvas, font, 210, 598, 7, charge);
             WriteMultilineText(canvas, font, 210, 587, 7, discharge);
@@ -413,7 +421,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             if (pageIndex == 1 && !string.IsNullOrWhiteSpace(atcudBarcode))
             {
-                WriteQrCode(canvas, atcudBarcode, 460, 450, 100);
+                WriteQrCode(canvas, boldFont, atcud, atcudBarcode, 460, 442, 100);
             }
         }
 
@@ -594,23 +602,39 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                   .EndText();
         }
 
-        private static void WriteQrCode(PdfCanvas canvas, string content, float x, float y, float size = 100)
+        private static void WriteQrCode(PdfCanvas canvas, PdfFont font, string atcud, string content, float x, float y, float size = 100)
         {
             if (string.IsNullOrEmpty(content)) return;
 
-            const float padding = 3f;
+            const float padding = 2f;
+            const float textOffset = 2f;
+            const float fontSize = 6f;
+            const float textAreaHeight = 7f;
+
+            string text = "ATCUD: " + atcud;
 
             var qrCode = new BarcodeQRCode(content);
             var formXObject = qrCode.CreateFormXObject(ColorConstants.BLACK, canvas.GetDocument());
 
-            // background branco com margem
+            // Fundo branco que cobre QR + texto
             canvas.SaveState();
             canvas.SetFillColor(ColorConstants.WHITE);
-            canvas.Rectangle(x - padding, y - padding, size + (padding * 2), size + (padding * 2));
+            canvas.Rectangle(
+                x - padding,
+                y - padding,
+                size + (padding * 2),
+                size + textAreaHeight + textOffset + (padding * 2));
             canvas.Fill();
             canvas.RestoreState();
 
-            // define a área do QRCode no canvas
+            // Calcular largura do texto e centrar em relação ao QR
+            float textWidth = font.GetWidth(text, fontSize);
+            float textX = x + (size - textWidth) / 2f;
+            float textY = y + size + textOffset;
+
+            WriteText(canvas, font, textX, textY, fontSize, text);
+
+            // QRCode
             var rect = new Rectangle(x, y, size, size);
             canvas.AddXObjectFittedIntoRectangle(formXObject, rect);
         }
@@ -847,7 +871,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             {
                 if (line.IsContactlessIcon)
                 {
-                    DrawImage(canvas, source, 18f, 8f, x, currentY - 2f);
+                    DrawImage(canvas, source, 28f, 18f, x, currentY - 2f);
                 }
                 else
                 {
@@ -919,6 +943,42 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
 
             return result;
+        }
+
+        private void AddResumeVat(PdfCanvas canvas, PdfFont font, float lineHeight, IList<VatLine>? vats)
+        {
+            if (vats == null)
+                return;
+
+            vats = [.. vats.OrderBy(x => x.Tax)];
+
+            var groups = vats.GroupBy(x => x.Tax);
+
+            float startY = 120;
+
+            foreach (var group in groups)
+            {
+                WriteTextRightAligned(canvas, font, 43, startY, 7, group.Key.ToString("F1"));
+                WriteTextRightAligned(canvas, font, 115, startY, 7, group.Sum(x => x.NetValue).ToFixed().ToString("F2"));
+                WriteTextRightAligned(canvas, font, 170, startY, 7, group.Sum(x => x.TaxValue).ToFixed().ToString("F2"));
+
+                startY -= lineHeight;
+            }
+
+            var reasons = vats.Where(x => !string.IsNullOrEmpty(x.VatReasonCode)).Select(x =>
+            {
+                var vatReasons = _vatReasonsService.GetVatReasons(x.VatReasonCode!);
+                var invoiceReferencesList = vatReasons?.Select(x => x.InvoiceReference).ToList();
+                string invoiceReferences = invoiceReferencesList != null
+                ? string.Join(", ", invoiceReferencesList)
+                : string.Empty;
+
+                return invoiceReferences;
+            });
+
+            var obs = string.Join(" | ", reasons);
+
+            WriteText(canvas, font, 50, 37, 6, obs);
         }
 
         #endregion
