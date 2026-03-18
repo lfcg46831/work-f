@@ -78,14 +78,17 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             const float lineHeight = 8f;
             const float fontSize = 7f;
-            const float leftX = 40f;
-            const float firstPageHeaderY = 600f;
+            const float firstPageHeaderY = 655f;
             const float otherPagesStartY = 800f;
             const float minY = 50f;
+            var receiptBlockWidth = CalculateFooterBlockWidth(font, block, fontSize);
+            var receiptLeftX = CalculateCenteredBlockLeftX(canvas, receiptBlockWidth);
 
-            DrawHeaderInformation(canvas, font, firstPageHeaderY, lineHeight, store);
+            var headerBottomY = DrawHeaderInformation(canvas, font, firstPageHeaderY, lineHeight, store);
+            var separatorY = headerBottomY - (lineHeight * 2);
+            DrawSeparatorLine(canvas, font, receiptLeftX, separatorY, fontSize, receiptBlockWidth);
 
-            float currentY = 560f;
+            float currentY = separatorY - (lineHeight * 2);
 
             foreach (var line in block.Lines)
             {
@@ -98,11 +101,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
                 if (line.IsContactlessIcon)
                 {
-                    DrawContactlessIndicator(canvas, leftX, currentY - 2f);
+                    DrawCenteredContactlessIndicator(canvas, receiptLeftX, receiptBlockWidth, currentY - 2f);
                 }
                 else
                 {
-                    WriteText(canvas, font, leftX, currentY, fontSize, line.Text);
+                    WriteText(canvas, font, receiptLeftX, currentY, fontSize, line.Text);
                 }
 
                 currentY -= lineHeight;
@@ -113,7 +116,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             return Convert.ToBase64String(ms.ToArray());
         }
 
-        private void DrawHeaderInformation(PdfCanvas canvas, PdfFont font, float y, float lineHeight, Stores store)
+        private float DrawHeaderInformation(PdfCanvas canvas, PdfFont font, float y, float lineHeight, Stores store)
         {
             var storeName = store.Name;
             var storePhoneNumber = string.Empty;
@@ -127,6 +130,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             WriteTextCentered(canvas, font, y, $"Telef.Nr.  {storePhoneNumber}");
             y -= lineHeight;
             WriteTextCentered(canvas, font, y, storeAddress);
+
+            return y;
         }
 
         public string BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate)
@@ -1053,6 +1058,39 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             var source = (_configuration.GetValue<string>("Shared") ?? "") + path;
             DrawImage(canvas, source, 28f, 18f, x, y);
+        }
+
+        private void DrawCenteredContactlessIndicator(PdfCanvas canvas, float blockX, float blockWidth, float y)
+        {
+            var centeredX = blockX + ((blockWidth - 28f) / 2f);
+            DrawContactlessIndicator(canvas, centeredX, y);
+        }
+
+        private static void DrawSeparatorLine(PdfCanvas canvas, PdfFont font, float x, float y, float fontSize, float blockWidth)
+        {
+            var dashWidth = font.GetWidth("-", fontSize);
+            var dashCount = Math.Max(1, (int)MathF.Floor(blockWidth / dashWidth));
+            var separator = new string('-', dashCount);
+            WriteText(canvas, font, x, y, fontSize, separator);
+        }
+
+        private static float CalculateFooterBlockWidth(PdfFont font, FooterBlock block, float fontSize)
+        {
+            const float contactlessWidth = 28f;
+
+            var maxLineWidth = block.Lines.Count == 0
+                ? 0f
+                : block.Lines.Max(line => line.IsContactlessIcon
+                    ? contactlessWidth
+                    : font.GetWidth(line.Text ?? string.Empty, fontSize));
+
+            return Math.Max(maxLineWidth, contactlessWidth);
+        }
+
+        private static float CalculateCenteredBlockLeftX(PdfCanvas canvas, float blockWidth)
+        {
+            var pageWidth = canvas.GetDocument().GetDefaultPageSize().GetWidth();
+            return (pageWidth - blockWidth) / 2f;
         }
 
         private void AddResumeVat(PdfCanvas canvas, PdfFont font, float lineHeight, IList<VatLine>? vats)
