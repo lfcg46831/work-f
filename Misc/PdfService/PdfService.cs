@@ -78,14 +78,15 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             const float lineHeight = 8f;
             const float fontSize = 7f;
-            const float leftX = 40f;
-            const float firstPageHeaderY = 600f;
+            const float firstPageHeaderY = 655f;
             const float otherPagesStartY = 800f;
             const float minY = 50f;
 
-            DrawHeaderInformation(canvas, font, firstPageHeaderY, lineHeight, store);
+            var headerBottomY = DrawHeaderInformation(canvas, font, firstPageHeaderY, lineHeight, store);
+            var separatorY = headerBottomY - (lineHeight * 2);
+            DrawSeparatorLine(canvas, font, separatorY, 7);
 
-            float currentY = 560f;
+            float currentY = separatorY - (lineHeight * 2);
 
             foreach (var line in block.Lines)
             {
@@ -98,11 +99,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
                 if (line.IsContactlessIcon)
                 {
-                    DrawContactlessIndicator(canvas, leftX, currentY - 2f);
+                    DrawCenteredContactlessIndicator(canvas, currentY - 2f);
                 }
                 else
                 {
-                    WriteText(canvas, font, leftX, currentY, fontSize, line.Text);
+                    WriteTextCentered(canvas, font, currentY, line.Text, fontSize);
                 }
 
                 currentY -= lineHeight;
@@ -113,7 +114,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             return Convert.ToBase64String(ms.ToArray());
         }
 
-        private void DrawHeaderInformation(PdfCanvas canvas, PdfFont font, float y, float lineHeight, Stores store)
+        private float DrawHeaderInformation(PdfCanvas canvas, PdfFont font, float y, float lineHeight, Stores store)
         {
             var storeName = store.Name;
             var storePhoneNumber = string.Empty;
@@ -127,6 +128,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             WriteTextCentered(canvas, font, y, $"Telef.Nr.  {storePhoneNumber}");
             y -= lineHeight;
             WriteTextCentered(canvas, font, y, storeAddress);
+
+            return y;
         }
 
         public string BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate)
@@ -1053,6 +1056,19 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             var source = (_configuration.GetValue<string>("Shared") ?? "") + path;
             DrawImage(canvas, source, 28f, 18f, x, y);
+        }
+
+        private void DrawCenteredContactlessIndicator(PdfCanvas canvas, float y)
+        {
+            var pageWidth = canvas.GetDocument().GetDefaultPageSize().GetWidth();
+            var centeredX = (pageWidth - 28f) / 2f;
+            DrawContactlessIndicator(canvas, centeredX, y);
+        }
+
+        private static void DrawSeparatorLine(PdfCanvas canvas, PdfFont font, float y, float fontSize)
+        {
+            const string separator = "----------------------------------------";
+            WriteTextCentered(canvas, font, y, separator, fontSize);
         }
 
         private void AddResumeVat(PdfCanvas canvas, PdfFont font, float lineHeight, IList<VatLine>? vats)
