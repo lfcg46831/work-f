@@ -62,27 +62,50 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             using var writer = new PdfWriter(ms);
             using var pdfDoc = new PdfDocument(writer);
 
+            PdfFont font = PdfFontFactory.CreateFont(StandardFonts.COURIER);
+
+            var block = TryBuildMultibancoReceiptBlock(customReceiptBase64, "Error decoding receipt.");
+
+            if (block == null)
+            {
+                return string.Empty;
+            }
+
             var page = pdfDoc.AddNewPage();
             var canvas = new PdfCanvas(page);
-            PdfFont font = PdfFontFactory.CreateFont(StandardFonts.COURIER);
 
             DrawLogotype(canvas);
 
-            float startY = 600;
-            float lineHeight = 8;
+            const float lineHeight = 8f;
+            const float fontSize = 7f;
+            const float leftX = 40f;
+            const float firstPageHeaderY = 600f;
+            const float otherPagesStartY = 800f;
+            const float minY = 50f;
 
-            DrawHeaderInformation(canvas, font, startY, lineHeight, store);
+            DrawHeaderInformation(canvas, font, firstPageHeaderY, lineHeight, store);
 
-            string decodedCustomerReceipt;
-            try
+            float currentY = 560f;
+
+            foreach (var line in block.Lines)
             {
-                var customerReceiptData = Convert.FromBase64String(customReceiptBase64);
-                decodedCustomerReceipt = Encoding.UTF8.GetString(customerReceiptData);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro decoding receipt.");
-                return string.Empty;
+                if (currentY < minY)
+                {
+                    page = pdfDoc.AddNewPage();
+                    canvas = new PdfCanvas(page);
+                    currentY = otherPagesStartY;
+                }
+
+                if (line.IsContactlessIcon)
+                {
+                    DrawContactlessIndicator(canvas, leftX, currentY - 2f);
+                }
+                else
+                {
+                    WriteText(canvas, font, leftX, currentY, fontSize, line.Text);
+                }
+
+                currentY -= lineHeight;
             }
 
             pdfDoc.Close();
@@ -927,23 +950,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         {
             float currentY = startY;
 
-            string path = "";
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                path = _configuration.GetSection("ContactlessIndicatorFilePathLinux").Value ?? "";
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                path = _configuration.GetSection("ContactlessIndicatorFilePathWin").Value ?? "";
-            }
-
-            var source = (_configuration.GetValue<string>("Shared") ?? "") + path;
-
             foreach (var line in block.Lines)
             {
                 if (line.IsContactlessIcon)
                 {
-                    DrawImage(canvas, source, 28f, 18f, x, currentY - 2f);
+                    DrawContactlessIndicator(canvas, x, currentY - 2f);
                 }
                 else
                 {
@@ -970,51 +981,78 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             foreach (var receiptBase64 in customerReceipts)
             {
-                string decodedCustomerReceipt;
-                try
+                var block = TryBuildMultibancoReceiptBlock(receiptBase64!, "Error decoding Multibanco receipt.", token);
+                if (block != null)
                 {
-                    var customerReceiptData = Convert.FromBase64String(receiptBase64!);
-                    decodedCustomerReceipt = Encoding.UTF8.GetString(customerReceiptData);
+                    result.Add(block);
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Erro ao descodificar talão Multibanco.");
-                    continue;
-                }
-
-                var block = new FooterBlock();
-
-                var lines = decodedCustomerReceipt
-                    .Replace("\r\n", "\n")
-                    .Replace("\r", "\n")
-                    .Split('\n', StringSplitOptions.None);
-
-                foreach (var line in lines)
-                {
-                    var normalizedLine = line
-                        .Replace("\u001B", string.Empty)
-                        .TrimEnd();
-
-                    if (normalizedLine.Trim() == token)
-                    {
-                        block.Lines.Add(new FooterLine
-                        {
-                            IsContactlessIcon = true
-                        });
-                    }
-                    else
-                    {
-                        block.Lines.Add(new FooterLine
-                        {
-                            Text = normalizedLine
-                        });
-                    }
-                }
-
-                result.Add(block);
             }
 
             return result;
+        }
+
+        private FooterBlock? TryBuildMultibancoReceiptBlock(string receiptBase64, string errorMessage, string? contactlessToken = null)
+        {
+            string decodedReceipt;
+            try
+            {
+                var receiptData = Convert.FromBase64String(receiptBase64);
+                decodedReceipt = Encoding.UTF8.GetString(receiptData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, errorMessage);
+                return null;
+            }
+
+            var token = contactlessToken ?? _configuration.GetSection("ContactlessIndicatorToken").Value ?? DefaultContactlessIndicatorToken;
+
+            var block = new FooterBlock();
+
+            var lines = decodedReceipt
+                .Replace("\r\n", "\n")
+                .Replace("\r", "\n")
+                .Split('\n', StringSplitOptions.None);
+
+            foreach (var line in lines)
+            {
+                var normalizedLine = line
+                    .Replace("\u001B", string.Empty)
+                    .TrimEnd();
+
+                if (normalizedLine.Trim() == token)
+                {
+                    block.Lines.Add(new FooterLine
+                    {
+                        IsContactlessIcon = true
+                    });
+                }
+                else
+                {
+                    block.Lines.Add(new FooterLine
+                    {
+                        Text = normalizedLine
+                    });
+                }
+            }
+
+            return block;
+        }
+
+        private void DrawContactlessIndicator(PdfCanvas canvas, float x, float y)
+        {
+            string path = "";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                path = _configuration.GetSection("ContactlessIndicatorFilePathLinux").Value ?? "";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                path = _configuration.GetSection("ContactlessIndicatorFilePathWin").Value ?? "";
+            }
+
+            var source = (_configuration.GetValue<string>("Shared") ?? "") + path;
+            DrawImage(canvas, source, 28f, 18f, x, y);
         }
 
         private void AddResumeVat(PdfCanvas canvas, PdfFont font, float lineHeight, IList<VatLine>? vats)
