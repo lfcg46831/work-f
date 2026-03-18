@@ -56,12 +56,57 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
         #region Public methods
 
-        public string BuildCustomReceipt(string customReceiptBase64)
+        public string BuildCustomReceipt(Stores store, string customReceiptBase64)
         {
-            throw new NotImplementedException();
+            using var ms = new MemoryStream();
+            using var writer = new PdfWriter(ms);
+            using var pdfDoc = new PdfDocument(writer);
+
+            var page = pdfDoc.AddNewPage();
+            var canvas = new PdfCanvas(page);
+            PdfFont font = PdfFontFactory.CreateFont(StandardFonts.COURIER);
+
+            DrawLogotype(canvas);
+
+            float startY = 600;
+            float lineHeight = 8;
+
+            DrawHeaderInformation(canvas, font, startY, lineHeight, store);
+
+            string decodedCustomerReceipt;
+            try
+            {
+                var customerReceiptData = Convert.FromBase64String(customReceiptBase64);
+                decodedCustomerReceipt = Encoding.UTF8.GetString(customerReceiptData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro decoding receipt.");
+                return string.Empty;
+            }
+
+            pdfDoc.Close();
+
+            return Convert.ToBase64String(ms.ToArray());
         }
 
-        public string BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isDuplicate)
+        private void DrawHeaderInformation(PdfCanvas canvas, PdfFont font, float y, float lineHeight, Stores store)
+        {
+            var storeName = store.Name;
+            var storePhoneNumber = string.Empty;
+
+            var storeAddress = $"{(string.IsNullOrWhiteSpace(store.Address1) ? "" : store.Address1 + ", ")}" +
+                $"{(string.IsNullOrWhiteSpace(store.Address2) ? "" : store.Address2 + ", ")}" +
+                $"{store.PostalCode ?? ""} {store.PostalCodeAddress ?? ""}".Trim() ?? string.Empty;
+
+            WriteTextCentered(canvas, font, y, storeName, 8);
+            y -= lineHeight;
+            WriteTextCentered(canvas, font, y, $"Telef.Nr.  {storePhoneNumber}");
+            y -= lineHeight;
+            WriteTextCentered(canvas, font, y, storeAddress);
+        }
+
+        public string BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate)
         {
             var templatePath = _configuration.GetValue<string>("InvoiceTemplatePath");
 
@@ -88,9 +133,10 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             DrawTransactionBarcode(pdfDoc, page, canvas, font, basket);
 
             // Desenha cabeçalho na primeira página
-            DrawHeader(canvas, font, boldFont, store, op, basket, isReturn, isDuplicate, pageIndex);
+            DrawHeader(canvas, font, boldFont, store, op, basket, isReturn, isSecondWay, isDuplicate, pageIndex);
 
-            var transportValue = DrawArticles(pdfDoc, font, boldFont, layoutBackground, store, op, basket, isReturn, isDuplicate, ref pageIndex, ref startY, lineHeight, minY, ref page, ref canvas);
+            var transportValue = DrawArticles(
+                pdfDoc, font, boldFont, layoutBackground, store, op, basket, isReturn, isSecondWay, isDuplicate, ref pageIndex, ref startY, lineHeight, minY, ref page, ref canvas);
 
             startY -= lineHeight;
 
@@ -112,6 +158,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 op,
                 basket,
                 isReturn,
+                isSecondWay,
                 isDuplicate,
                 ref pageIndex,
                 ref page,
@@ -138,7 +185,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             WriteText(canvas, boldFont, 430, 74, 8, "Total");
             WriteTextRightAligned(canvas, boldFont, 560, 74, 8, total);
 
-            AddPaymentInformation(basket.PaymentLines, merchantReceipts);
+            AddPaymentInformation(store, basket.PaymentLines, merchantReceipts);
 
             pdfDoc.Close();
             return Convert.ToBase64String(ms.ToArray());
@@ -157,27 +204,10 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             var canvas = new PdfCanvas(page);
             PdfFont font = PdfFontFactory.CreateFont(StandardFonts.COURIER);
 
-            string path = "";
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                path = _configuration.GetSection("LogotypeFilePathLinux").Value ?? "";
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                path = _configuration.GetSection("LogotypeFilePathWin").Value ?? "";
-            }
-
-            var source = _configuration.GetValue<string>("Shared") + path;
-
-            float pw = (float)172.071;
-            float ph = (float)53.01599;
-            float lf = (float)211.602;
-            float bt = (float)727.508;
-
-            this.DrawImage(canvas, source, pw, ph, lf, bt);
+            DrawLogotype(canvas);
 
             float startY = 600;
-            float lineHeight = 10;
+            float lineHeight = 8;
             float minY = 50;
 
             if (withArticles && basket.ArticleLines.Count > 0)
@@ -204,6 +234,28 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             return Convert.ToBase64String(ms.ToArray());
         }
 
+        private void DrawLogotype(PdfCanvas canvas)
+        {
+            string path = "";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                path = _configuration.GetSection("LogotypeFilePathLinux").Value ?? "";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                path = _configuration.GetSection("LogotypeFilePathWin").Value ?? "";
+            }
+
+            var source = _configuration.GetValue<string>("Shared") + path;
+
+            float pw = (float)172.071;
+            float ph = (float)53.01599;
+            float lf = (float)211.602;
+            float bt = (float)727.508;
+
+            this.DrawImage(canvas, source, pw, ph, lf, bt);
+        }
+
         #endregion
 
         #region Private methods
@@ -228,6 +280,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             Operators op,
             Basket basket,
             bool isReturn,
+            bool isSecondWay,
             bool isDuplicate,
             ref int pageIndex,
             ref float startY,
@@ -258,7 +311,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                     pageIndex++;
 
                     // Desenha cabeçalho
-                    DrawHeader(canvas, font, boldFont, store, op, basket, isReturn, isDuplicate, pageIndex);
+                    DrawHeader(canvas, font, boldFont, store, op, basket, isReturn, isSecondWay, isDuplicate, pageIndex);
                     DrawTransactionBarcode(pdfDoc, page, canvas, font, basket);
 
                     startY = 500; // reinicia posição inicial dos artigos
@@ -349,13 +402,23 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             canvas.RestoreState();
         }
 
-        private static void DrawHeader(PdfCanvas canvas, PdfFont font, PdfFont boldFont, Stores store, Operators op, Basket basket, bool isReturn, bool isDuplicate, int pageIndex)
+        private static void DrawHeader(
+            PdfCanvas canvas,
+            PdfFont font,
+            PdfFont boldFont,
+            Stores store,
+            Operators op,
+            Basket basket,
+            bool isReturn,
+            bool isSecondWay,
+            bool isDuplicate,
+            int pageIndex)
         {
             var hasCreditPayment = basket.PaymentLines?.Any(line => line.IsCredit) == true;
             var isSimpleInvoice = basket.CustomerFiscalInformation.IsSimpleInvoice();
 
             var docName = basket.CustomerFiscalInformation.ToDocumentName(isReturn, hasCreditPayment);
-            var docType = basket.CustomerFiscalInformation.ToDocumentType(false, hasCreditPayment);
+            var docType = basket.CustomerFiscalInformation.ToDocumentType(isReturn, hasCreditPayment);
             var docNumber = basket.BasketSerie.Serie + "/" + basket.BasketSerie.Sequence;
             var docDate = basket.TransactionOcurredAt?.ToString("yyyy-MM-dd");
             var invoiceNumber = $"{docType} {docNumber}";
@@ -390,7 +453,15 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             var vats = basket.VatLines;
             var atcudBarcode = AtcudHelper.BuildAtcud(basket, isSimpleInvoice, vats);
 
-            WriteText(canvas, boldFont, 525, 769, 7, isDuplicate ? "Original" : "Duplicado");
+            if (isSecondWay)
+            {
+                WriteTextRightAligned(canvas, boldFont, 550, 769, 7, isDuplicate ? "2ª Via Original" : "2ª Via Duplicado");
+            }
+            else
+            {
+                WriteText(canvas, boldFont, 550, 769, 7, isDuplicate ? "Original" : "Duplicado");
+            }
+
             WriteText(canvas, font, 324, 749, 8, docName);
             WriteText(canvas, font, 535, 749, 8, "Pag. ");
             WriteText(canvas, font, 565, 749, 8, pageIndex.ToString());
@@ -639,9 +710,9 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             canvas.AddXObjectFittedIntoRectangle(formXObject, rect);
         }
 
-        private static void WriteTextCentered(PdfCanvas canvas, PdfFont font, float y, string text, float fontSize = 7)
+        private static void WriteTextCentered(PdfCanvas canvas, PdfFont font, float y, string? text, float fontSize = 7)
         {
-            if (string.IsNullOrEmpty(text)) return;
+            if (string.IsNullOrWhiteSpace(text)) return;
 
             float pageWidth = canvas.GetDocument().GetDefaultPageSize().GetWidth();
 
@@ -680,7 +751,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
         }
 
-        private void AddPaymentInformation(IList<BasketPayment>? paymentLines, List<ReceiptResponse> merchantReceipts)
+        private void AddPaymentInformation(Stores store, IList<BasketPayment>? paymentLines, List<ReceiptResponse> merchantReceipts)
         {
             var rawMerchantReceipts = paymentLines?
                 .Where(p => p.StrategyType == (int)BasketPaymentType.MultiBanco)
@@ -693,7 +764,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             {
                 if (!string.IsNullOrEmpty(mr.MerchantReceipt))
                 {
-                    var result = this.BuildCustomReceipt(mr.MerchantReceipt);
+                    var result = this.BuildCustomReceipt(store, mr.MerchantReceipt);
 
                     if (_receiptPrintPolicy.ShouldPrintMerchantReceipt((ReceiptType?)mr.ReceiptType))
                     {
@@ -716,6 +787,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             Operators op,
             Basket basket,
             bool isReturn,
+            bool isSecondWay,
             bool isDuplicate,
             ref int pageIndex,
             ref PdfPage page,
@@ -773,7 +845,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                     canvas.AddXObjectAt(layoutBackground, 0, 0);
 
                     pageIndex++;
-                    DrawHeader(canvas, font, boldFont, store, op, basket, isReturn, isDuplicate, pageIndex);
+                    DrawHeader(canvas, font, boldFont, store, op, basket, isReturn, isSecondWay, isDuplicate, pageIndex);
                     DrawTransactionBarcode(pdfDoc, page, canvas, font, basket);
 
                     currentY = newPageTopY;
@@ -986,9 +1058,9 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
     public interface IPdfService
     {
-        string BuildCustomReceipt(string customReceiptBase64);
+        string BuildCustomReceipt(Stores store, string customReceiptBase64);
 
-        string BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isDuplicate);
+        string BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate);
 
         string BuildSuspendedBasketReceipt(Basket? basket, bool withArticles);
     }
