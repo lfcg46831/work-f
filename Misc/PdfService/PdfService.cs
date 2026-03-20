@@ -1326,7 +1326,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         private static float CalculateCenteredBlockLeftX(PdfCanvas canvas, float blockWidth)
         {
             var pageWidth = canvas.GetDocument().GetDefaultPageSize().GetWidth();
-            return (pageWidth - blockWidth) / 2f;
+            const float leftMargin = 8f;
+            return Math.Max(leftMargin, (pageWidth - blockWidth) / 2f);
         }
 
         private void AddResumeVat(PdfCanvas canvas, PdfFont font, float lineHeight, IList<VatLine>? vats)
