@@ -29,7 +29,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         IOperatorService operatorService,
         IStructureService structureService,
         IVatReasonsService vatReasonsService,
-        IReceiptPrintPolicy receiptPrintPolicy) : IPdfService
+        IReceiptPrintPolicy receiptPrintPolicy,
+        IVatService vatService) : IPdfService
     {
         private sealed class FooterBlock
         {
@@ -44,6 +45,18 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             public bool IsContactlessIcon { get; init; }
         }
 
+        private sealed class TransactionBarcodeInfo
+        {
+            public required string BarcodeValue { get; init; }
+            public required string TransactionNumber { get; init; }
+            public required string TransactionOccurredAtBarcode { get; init; }
+            public required string TransactionOccurredAtDisplay { get; init; }
+            public required string OperatorCode { get; init; }
+            public required string OperatorName { get; init; }
+            public required string PosCode { get; init; }
+            public required string StoreCode { get; init; }
+        }
+
         private const string NoStructure = "Sem Categoria";
         private const string DefaultContactlessIndicatorToken = "@@logo_CTLS@@";
 
@@ -53,6 +66,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         private readonly IStructureService _structureService = structureService;
         private readonly IVatReasonsService _vatReasonsService = vatReasonsService;
         private readonly IReceiptPrintPolicy _receiptPrintPolicy = receiptPrintPolicy;
+        private readonly IVatService _vatService = vatService;
 
         #region Public methods
 
@@ -254,34 +268,46 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             using var writer = new PdfWriter(ms);
             using var pdfDoc = new PdfDocument(writer);
 
-            var page = pdfDoc.AddNewPage();
-            var canvas = new PdfCanvas(page);
             PdfFont font = PdfFontFactory.CreateFont(StandardFonts.COURIER);
+            PdfFont boldFont = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
+            var transactionBarcodeInfo = BuildTransactionBarcodeInfo(basket);
+            var vatIdentifiersByCode = new Dictionary<int, string?>();
+            var pageIndex = 1;
 
-            DrawLogotype(canvas);
+            var (page, canvas) = CreateTransactionReceiptPage(pdfDoc, font, transactionBarcodeInfo, pageIndex, drawLogotype: true);
 
-            float startY = 600;
-            float lineHeight = 8;
-            float minY = 50;
+            const float firstPageStartY = 600f;
+            const float continuationPageStartY = 752f;
+            const float lineHeight = 8f;
+            const float minY = 50f;
+            float startY = firstPageStartY;
 
-            if (withArticles && basket.ArticleLines.Count > 0)
+            if (withArticles && basket.ArticleLines?.Count > 0)
             {
                 var allStructure = _structureService.GetAllStructures(true);
 
-                DrawSuspendedArticles(pdfDoc, font, basket.ArticleLines, allStructure, ref page, ref startY, lineHeight, minY);
+                DrawSuspendedArticles(
+                    pdfDoc,
+                    font,
+                    basket.ArticleLines,
+                    basket.VatLines,
+                    allStructure,
+                    vatIdentifiersByCode,
+                    transactionBarcodeInfo,
+                    ref pageIndex,
+                    ref page,
+                    ref canvas,
+                    ref startY,
+                    lineHeight,
+                    minY,
+                    continuationPageStartY);
             }
 
             startY -= lineHeight * 2;
-
-            if (startY < minY)
-            {
-                page = pdfDoc.AddNewPage();
-                canvas = new PdfCanvas(page);
-                startY = 800;
-            }
-
-            WriteTextCentered(canvas, font, startY, "** TRANSAÇÃO GRAVADA **", 10);
+            EnsureTransactionReceiptPageBreak(pdfDoc, font, transactionBarcodeInfo, ref pageIndex, ref page, ref canvas, ref startY, minY, continuationPageStartY);
+            WriteTextCentered(canvas, boldFont, startY, "** TRANSAÇÃO GRAVADA **", 10);
             startY -= lineHeight * 2;
+            WriteTextCentered(canvas, font, startY, $"Atendido por: {transactionBarcodeInfo.OperatorName}");
 
             pdfDoc.Close();
 
@@ -555,39 +581,38 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
         }
 
-        private static void DrawSuspendedArticles(
+        private void DrawSuspendedArticles(
             PdfDocument pdfDoc,
             PdfFont font,
             IList<ArticleLine> articleLines,
-            List<Structures> allStructure,
+            IList<VatLine>? vatLines,
+            List<Structures>? allStructure,
+            Dictionary<int, string?> vatIdentifiersByCode,
+            TransactionBarcodeInfo transactionBarcodeInfo,
+            ref int pageIndex,
             ref PdfPage page,
+            ref PdfCanvas canvas,
             ref float startY,
             float lineHeight,
-            float minY)
+            float minY,
+            float resetY)
         {
-            var canvas = new PdfCanvas(page);
-            var groupedArticles = articleLines.GroupBy(x => x.CategoryCode).Distinct();
+            var groupedArticles = articleLines.GroupBy(x => x.CategoryCode);
 
             foreach (var group in groupedArticles)
             {
-                CheckPageBreak(pdfDoc, ref page, ref canvas, ref startY, minY, 800);
-
-                long categoryCode = long.Parse(group.Key);
-                var structure = allStructure?.Find(x => x.Code == categoryCode);
-                string structureName = structure != null ? structure.Name ?? NoStructure : NoStructure;
+                EnsureTransactionReceiptPageBreak(pdfDoc, font, transactionBarcodeInfo, ref pageIndex, ref page, ref canvas, ref startY, minY, resetY);
 
                 startY -= lineHeight;
+                var structureName = ResolveStructureName(group.Key, allStructure);
                 WriteText(canvas, font, 30, startY, 7, structureName.ToUpper());
                 startY -= lineHeight;
 
                 foreach (var item in group)
                 {
-                    var vat = item.Vats?.FirstOrDefault();
-                    if (vat == null) continue;
+                    EnsureTransactionReceiptPageBreak(pdfDoc, font, transactionBarcodeInfo, ref pageIndex, ref page, ref canvas, ref startY, minY, resetY);
 
-                    CheckPageBreak(pdfDoc, ref page, ref canvas, ref startY, minY, 800);
-
-                    string vatDisplay = $"{vat.Identifier} {vat.Tax:00}%";
+                    string vatDisplay = BuildSuspendedArticleVatDisplay(item, vatLines, vatIdentifiersByCode);
                     string descDisplay = item.ShortDescription?.ToUpper() ?? string.Empty;
                     string totalDisplay = item.TotalPrice.ToString("F2");
 
@@ -631,24 +656,139 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                     {
                         foreach (var metadata in item.Metadata)
                         {
-                            CheckPageBreak(pdfDoc, ref page, ref canvas, ref startY, minY, 800);
+                            EnsureTransactionReceiptPageBreak(pdfDoc, font, transactionBarcodeInfo, ref pageIndex, ref page, ref canvas, ref startY, minY, resetY);
                             WriteText(canvas, font, 80, startY, 7, $"{metadata.Description}: {metadata.Value}");
                             startY -= lineHeight;
                         }
                     }
 
-                    if (item.DirectDiscount > 0)
+                    if (TryGetSuspendedArticleDiscount(item, out var immediateDiscount))
                     {
-                        CheckPageBreak(pdfDoc, ref page, ref canvas, ref startY, minY, 800);
+                        EnsureTransactionReceiptPageBreak(pdfDoc, font, transactionBarcodeInfo, ref pageIndex, ref page, ref canvas, ref startY, minY, resetY);
                         WriteText(canvas, font, 100, startY, 7, "Poupança Imediata");
-                        WriteText(canvas, font, 450, startY, 7, $"({item.DirectDiscount:F2})");
+                        WriteText(canvas, font, 450, startY, 7, $"({immediateDiscount:F2})");
                         startY -= lineHeight;
                     }
                 }
             }
         }
 
-        private void DrawTransactionBarcode(PdfDocument pdfDoc, PdfPage page, PdfCanvas canvas, PdfFont font, Basket basket)
+        private string ResolveStructureName(string? categoryCode, List<Structures>? allStructure)
+        {
+            if (!long.TryParse(categoryCode, out var parsedCategoryCode))
+                return NoStructure;
+
+            var structure = allStructure?.Find(x => x.Code == parsedCategoryCode);
+            return structure?.Name ?? NoStructure;
+        }
+
+        private string BuildSuspendedArticleVatDisplay(
+            ArticleLine item,
+            IList<VatLine>? vatLines,
+            Dictionary<int, string?> vatIdentifiersByCode)
+        {
+            var matchedVatLine = vatLines?.FirstOrDefault(v =>
+                v.Code == item.VatCode &&
+                v.Tax == item.ArticleVatPercentage &&
+                string.Equals(v.VatReasonCode, item.VatReasonCode, StringComparison.OrdinalIgnoreCase));
+
+            var fallbackVat = item.Vats?.FirstOrDefault(v =>
+                v.Code == item.VatCode &&
+                v.Tax == item.ArticleVatPercentage &&
+                string.Equals(v.VatReasonCode, item.VatReasonCode, StringComparison.OrdinalIgnoreCase))
+                ?? item.Vats?.FirstOrDefault();
+
+            var vatIdentifier = GetVatIdentifier(item.VatCode, matchedVatLine?.Identifier, fallbackVat?.Identifier, vatIdentifiersByCode);
+            var tax = matchedVatLine?.Tax ?? fallbackVat?.Tax ?? item.ArticleVatPercentage;
+
+            return string.IsNullOrWhiteSpace(vatIdentifier)
+                ? $"{tax:00}%"
+                : $"{vatIdentifier} {tax:00}%";
+        }
+
+        private string? GetVatIdentifier(
+            int vatCode,
+            string? vatLineIdentifier,
+            string? fallbackIdentifier,
+            Dictionary<int, string?> vatIdentifiersByCode)
+        {
+            if (!string.IsNullOrWhiteSpace(vatLineIdentifier))
+                return vatLineIdentifier;
+
+            if (!vatIdentifiersByCode.TryGetValue(vatCode, out var vatIdentifier))
+            {
+                vatIdentifier = _vatService.GetVat(vatCode)?.Identifier;
+                vatIdentifiersByCode[vatCode] = vatIdentifier;
+            }
+
+            return string.IsNullOrWhiteSpace(vatIdentifier) ? fallbackIdentifier : vatIdentifier;
+        }
+
+        private static bool TryGetSuspendedArticleDiscount(ArticleLine item, out decimal discount)
+        {
+            if (item.DirectDiscount > 0)
+            {
+                discount = item.DirectDiscount;
+                return true;
+            }
+
+            if (item.OlcasDiscount > 0)
+            {
+                discount = item.OlcasDiscount;
+                return true;
+            }
+
+            discount = 0m;
+            return false;
+        }
+
+        private (PdfPage Page, PdfCanvas Canvas) CreateTransactionReceiptPage(
+            PdfDocument pdfDoc,
+            PdfFont font,
+            TransactionBarcodeInfo transactionBarcodeInfo,
+            int pageIndex,
+            bool drawLogotype)
+        {
+            var page = pdfDoc.AddNewPage();
+            var canvas = new PdfCanvas(page);
+
+            if (drawLogotype)
+            {
+                DrawLogotype(canvas);
+            }
+
+            DrawTransactionBarcode(pdfDoc, page, canvas, font, transactionBarcodeInfo);
+            DrawTransactionReceiptPageNumber(canvas, font, pageIndex);
+
+            return (page, canvas);
+        }
+
+        private void EnsureTransactionReceiptPageBreak(
+            PdfDocument pdfDoc,
+            PdfFont font,
+            TransactionBarcodeInfo transactionBarcodeInfo,
+            ref int pageIndex,
+            ref PdfPage page,
+            ref PdfCanvas canvas,
+            ref float startY,
+            float minY,
+            float resetY)
+        {
+            if (startY >= minY)
+                return;
+
+            pageIndex++;
+            (page, canvas) = CreateTransactionReceiptPage(pdfDoc, font, transactionBarcodeInfo, pageIndex, drawLogotype: false);
+            startY = resetY;
+        }
+
+        private static void DrawTransactionReceiptPageNumber(PdfCanvas canvas, PdfFont font, int pageIndex)
+        {
+            WriteText(canvas, font, 535, 772, 7, "Pag.");
+            WriteTextRightAligned(canvas, font, 565, 772, 7, pageIndex.ToString());
+        }
+
+        private TransactionBarcodeInfo BuildTransactionBarcodeInfo(Basket basket)
         {
             var totalCompanyCode = _configuration.GetValue<string>("TotalCompanyCode");
             if (string.IsNullOrWhiteSpace(totalCompanyCode))
@@ -661,20 +801,44 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             var totalPosCode = _configuration.GetValue<int>("TotalPosCode");
 
             int operatorCode = (int)(basket.PaymentLines?.FirstOrDefault()?.OperatorCode ?? 0);
+            var operatorDefined = operatorCode > 0
+                ? _operatorService.GetOperator(totalCompanyCode, totalStoreCode, operatorCode)
+                : _operatorService.GetOperatorLogged();
 
-            var operatorDefined = operatorCode > 0 ? _operatorService.GetOperator(totalCompanyCode, totalStoreCode, operatorCode) : _operatorService.GetOperatorLogged();
+            if (operatorDefined == null)
+                throw new InvalidOperationException("Operator information is required to build the transaction barcode.");
 
             var transactionNumber = basket.TransactionNumber.ToString("D6");
-            var transactionOcurredAt = basket.TransactionOcurredAt?.ToString("yyyyMMddHHmm");
+            var transactionOccurredAtBarcode = basket.TransactionOcurredAt?.ToString("yyyyMMddHHmm") ?? string.Empty;
+            var transactionOccurredAtDisplay = basket.TransactionOcurredAt?.ToString("yyyy-MM-dd HH:mm") ?? string.Empty;
             var operatorCodeValue = operatorDefined.Code.ToString("D4");
             var posCode = totalPosCode.ToString("D4");
             var storeCode = totalStoreCode.ToString("D4");
 
-            var barcodeValue = transactionNumber + transactionOcurredAt + operatorCodeValue + posCode + storeCode;
+            return new TransactionBarcodeInfo
+            {
+                BarcodeValue = transactionNumber + transactionOccurredAtBarcode + operatorCodeValue + posCode + storeCode,
+                TransactionNumber = transactionNumber,
+                TransactionOccurredAtBarcode = transactionOccurredAtBarcode,
+                TransactionOccurredAtDisplay = transactionOccurredAtDisplay,
+                OperatorCode = operatorCodeValue,
+                OperatorName = operatorDefined.Name ?? string.Empty,
+                PosCode = posCode,
+                StoreCode = storeCode
+            };
+        }
 
+        private void DrawTransactionBarcode(PdfDocument pdfDoc, PdfPage page, PdfCanvas canvas, PdfFont font, Basket basket)
+        {
+            var transactionBarcodeInfo = BuildTransactionBarcodeInfo(basket);
+            DrawTransactionBarcode(pdfDoc, page, canvas, font, transactionBarcodeInfo);
+        }
+
+        private void DrawTransactionBarcode(PdfDocument pdfDoc, PdfPage page, PdfCanvas canvas, PdfFont font, TransactionBarcodeInfo transactionBarcodeInfo)
+        {
             var barcode = new Barcode128(pdfDoc);
             barcode.SetCodeType(Barcode128.CODE128_UCC);
-            barcode.SetCode(barcodeValue);
+            barcode.SetCode(transactionBarcodeInfo.BarcodeValue);
             barcode.SetFont(null);
 
             PdfFormXObject xObject = barcode.CreateFormXObject(ColorConstants.BLACK, ColorConstants.BLACK, pdfDoc);
@@ -690,11 +854,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             using var imgCanvas = new Canvas(page, page.GetPageSize());
             imgCanvas.Add(img);
 
-            WriteText(canvas, font, 422, 790, 6, transactionNumber);
-            WriteText(canvas, font, 449, 790, 6, transactionOcurredAt);
-            WriteText(canvas, font, 499, 790, 6, operatorCodeValue);
-            WriteText(canvas, font, 519, 790, 6, posCode);
-            WriteText(canvas, font, 541, 790, 6, storeCode);
+            WriteText(canvas, font, 420, 790, 6, transactionBarcodeInfo.TransactionNumber);
+            WriteText(canvas, font, 447, 790, 6, transactionBarcodeInfo.TransactionOccurredAtDisplay);
+            WriteText(canvas, font, 501, 790, 6, transactionBarcodeInfo.OperatorCode);
+            WriteText(canvas, font, 521, 790, 6, transactionBarcodeInfo.PosCode);
+            WriteText(canvas, font, 543, 790, 6, transactionBarcodeInfo.StoreCode);
         }
 
         private static void WriteText(PdfCanvas canvas, PdfFont font, float x, float y, float fontSize, string? text)
