@@ -134,7 +134,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             return y;
         }
 
-        public string BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate)
+        public ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate)
         {
             var templatePath = _configuration.GetValue<string>("InvoiceTemplatePath");
 
@@ -195,6 +195,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 boldFont,
                 notesText,
                 basket.PaymentLines,
+                basket.ReturnLines,
                 startY,
                 125f,
                 transportValue);
@@ -203,6 +204,12 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             WriteTextRightAligned(canvas, font, 260, 132, 7, volumes.ToString());
             WriteTextRightAligned(canvas, font, 393, 132, 7, weigthTotal.ToString() + " Kgs.");
+
+            if (isReturn)
+            {
+                WriteText(canvas, font, 190, 116, 7, "Tomei conhecimento das regularizacoes");
+                WriteText(canvas, font, 190, 108, 7, "do IVA, No. 5, Art. 78 do CIVA.");
+            }
 
             WriteText(canvas, font, 430, 114, 7, "Mercadoria");
             WriteTextRightAligned(canvas, font, 555, 114, 7, transportValue.ToFixed().ToString("F2"));
@@ -213,10 +220,29 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             WriteText(canvas, boldFont, 430, 74, 8, "Total");
             WriteTextRightAligned(canvas, boldFont, 560, 74, 8, total);
 
-            AddPaymentInformation(store, basket.PaymentLines, merchantReceipts);
+            var hasRecoveryReceipt = false;
+            if (isReturn)
+            {
+                AddReturnInformation(store, basket.ReturnLines, merchantReceipts);
+            }
+            else
+            {
+                hasRecoveryReceipt = AddPaymentInformation(store, basket.PaymentLines, merchantReceipts);
+            }
 
             pdfDoc.Close();
-            return Convert.ToBase64String(ms.ToArray());
+
+            var receipt = Convert.ToBase64String(ms.ToArray());
+
+            var result = new ReceiptResponse()
+            {
+                IsMerchantReceipt = false,
+                ReceiptContent = receipt,
+                ReceiptContentType = "application/pdf",
+                ReceiptType = hasRecoveryReceipt ? TransactionReceiptType.RecoveryReceipt : TransactionReceiptType.NormalReceipt
+            };
+
+            return result;
         }
 
         public string BuildSuspendedBasketReceipt(Basket? basket, bool withArticles)
@@ -443,7 +469,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             int pageIndex)
         {
             var hasCreditPayment = basket.PaymentLines?.Any(line => line.IsCredit) == true;
-            var isSimpleInvoice = basket.CustomerFiscalInformation.IsSimpleInvoice();
+            var isSimpleInvoice = basket.CustomerFiscalInformation == null || basket.CustomerFiscalInformation.IsSimpleInvoice;
 
             var docName = basket.CustomerFiscalInformation.ToDocumentName(isReturn, hasCreditPayment);
             var docType = basket.CustomerFiscalInformation.ToDocumentType(isReturn, hasCreditPayment);
@@ -451,24 +477,24 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             var docDate = basket.TransactionOcurredAt?.ToString("yyyy-MM-dd");
             var invoiceNumber = $"{docType} {docNumber}";
 
-            var payerName = basket.CustomerFiscalInformation.Name;
-            var payerAddress = basket.CustomerFiscalInformation.Address;
-            var payerPostalCode = basket.CustomerFiscalInformation.PostalCode;
-            var payerCity = basket.CustomerFiscalInformation.City;
-            var payerCountry = basket.CustomerFiscalInformation.Country;
-            var nif = basket.CustomerFiscalInformation.FiscalNumber;
+            var payerName = basket.CustomerFiscalInformation?.Name;
+            var payerAddress = basket.CustomerFiscalInformation?.Address;
+            var payerPostalCode = basket.CustomerFiscalInformation?.PostalCode;
+            var payerCity = basket.CustomerFiscalInformation?.City;
+            var payerCountry = basket.CustomerFiscalInformation?.Country;
+            var nif = basket.CustomerFiscalInformation?.FiscalNumber;
 
             var storeName = store.Name;
             var storeAddress = store.PostalCodeAddress;
             var storePhoneNumber = string.Empty;
 
-            var payerInternalCode = basket.CustomerFinanceInformation.InternalCode;
+            var payerInternalCode = basket.CustomerFinanceInformation?.InternalCode;
             var operatorInternalCode = op.Code;
 
             var charge = $"{(string.IsNullOrWhiteSpace(store.Address1) ? "" : store.Address1 + ", ")}" +
                 $"{(string.IsNullOrWhiteSpace(store.Address2) ? "" : store.Address2 + ", ")}" +
                 $"{store.PostalCode ?? ""} {store.PostalCodeAddress ?? ""}".Trim() ?? string.Empty;
-            var discharge = basket.CustomerFiscalInformation.DischargeLocation.Replace(", ", "\r\n");
+            var discharge = basket.CustomerFiscalInformation?.DischargeLocation.Replace(", ", "\r\n");
             var chargingDate = basket.TransactionOcurredAt?.ToString("yyyy-MM-dd");
             var deliveryDate = basket.TransactionOcurredAt?.ToString("yyyy-MM-dd");
             var chargingTime = basket.TransactionOcurredAt?.ToString("HH:mm");
@@ -483,11 +509,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             if (isSecondWay)
             {
-                WriteTextRightAligned(canvas, boldFont, 550, 769, 7, isDuplicate ? "2ª Via Original" : "2ª Via Duplicado");
+                WriteTextRightAligned(canvas, boldFont, 500, 769, 7, isDuplicate ? "2ª Via Original" : "2ª Via Duplicado");
             }
             else
             {
-                WriteText(canvas, boldFont, 550, 769, 7, isDuplicate ? "Original" : "Duplicado");
+                WriteTextRightAligned(canvas, boldFont, 500, 769, 7, isDuplicate ? "Original" : "Duplicado");
             }
 
             WriteText(canvas, font, 324, 749, 8, docName);
@@ -515,11 +541,16 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             WriteText(canvas, font, 454, 596, 7, chargingTime);
             WriteText(canvas, font, 486, 596, 7, $"{payerCountry} {nif}");
 
-            WriteText(canvas, font, 22, 520, 7, "ATCUD:" + atcud);
-            WriteText(canvas, font, 22, 512, 7, hashCode + "-Processado por programa certificado " + certificationCode + "/AT");
-
             if (pageIndex == 1 && !string.IsNullOrWhiteSpace(atcudBarcode))
             {
+                WriteText(canvas, font, 22, 520, 7, "ATCUD:" + atcud);
+                WriteText(canvas, font, 22, 512, 7, hashCode + "-Processado por programa certificado " + certificationCode + "/AT");
+
+                if (isReturn)
+                {
+                    WriteText(canvas, font, 22, 464, 7, $"Referente ao Documento n. {basket.ParentBasketInfo?.Invoice}");
+                }
+
                 WriteQrCode(canvas, boldFont, atcud, atcudBarcode, 460, 442, 100);
             }
         }
@@ -779,9 +810,43 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
         }
 
-        private void AddPaymentInformation(Stores store, IList<BasketPayment>? paymentLines, List<ReceiptResponse> merchantReceipts)
+        private bool AddPaymentInformation(Stores store, IList<BasketPayment>? paymentLines, List<ReceiptResponse> merchantReceipts)
         {
+            var customerReceipts = paymentLines?.Where(p => p.StrategyType == (int)BasketPaymentType.MultiBanco).Select(p => (p.CustomerReceipt, p.ReceiptType));
+            var hasRecoveryReceipt = customerReceipts?.Any(x => x.ReceiptType == (int)TransactionReceiptType.RecoveryReceipt) == true;
+
             var rawMerchantReceipts = paymentLines?
+                .Where(p => p.StrategyType == (int)BasketPaymentType.MultiBanco)
+                .Select(p => (p.MerchantReceipt, p.ReceiptType));
+
+            if (rawMerchantReceipts?.Count() > 0)
+            {
+                foreach (var mr in rawMerchantReceipts)
+                {
+                    if (!string.IsNullOrEmpty(mr.MerchantReceipt))
+                    {
+                        var result = this.BuildCustomReceipt(store, mr.MerchantReceipt);
+
+                        if (_receiptPrintPolicy.ShouldPrintMerchantReceipt((TransactionReceiptType?)mr.ReceiptType))
+                        {
+                            merchantReceipts.Add(new ReceiptResponse()
+                            {
+                                IsMerchantReceipt = true,
+                                ReceiptContent = result,
+                                ReceiptContentType = "application/pdf",
+                                ReceiptType = (TransactionReceiptType?)mr.ReceiptType
+                            });
+                        }
+                    }
+                }
+            }
+
+            return hasRecoveryReceipt;
+        }
+
+        private void AddReturnInformation(Stores store, IList<BasketReturn>? returnLines, List<ReceiptResponse> merchantReceipts)
+        {
+            var rawMerchantReceipts = returnLines?
                 .Where(p => p.StrategyType == (int)BasketPaymentType.MultiBanco)
                 .Select(p => (p.MerchantReceipt, p.ReceiptType));
 
@@ -794,14 +859,14 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 {
                     var result = this.BuildCustomReceipt(store, mr.MerchantReceipt);
 
-                    if (_receiptPrintPolicy.ShouldPrintMerchantReceipt((ReceiptType?)mr.ReceiptType))
+                    if (_receiptPrintPolicy.ShouldPrintMerchantReceipt((TransactionReceiptType?)mr.ReceiptType))
                     {
                         merchantReceipts.Add(new ReceiptResponse()
                         {
                             IsMerchantReceipt = true,
                             ReceiptContent = result,
                             ReceiptContentType = "application/pdf",
-                            ReceiptType = (ReceiptType?)mr.ReceiptType
+                            ReceiptType = (TransactionReceiptType?)mr.ReceiptType
                         });
                     }
                 }
@@ -824,6 +889,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             PdfFont boldFont,
             string invoiceNotes,
             IList<BasketPayment>? paymentLines,
+            IList<BasketReturn>? returnLines,
             float topY,
             float bottomY,
             decimal transportValue)
@@ -836,7 +902,18 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             const float newPageTopY = 430f;
 
             var notesBlock = BuildInvoiceNotesBlock(invoiceNotes);
-            var receiptBlocks = BuildMultibancoReceiptBlocks(paymentLines);
+
+            var customerReceipts = isReturn
+                ? returnLines?
+                    .Where(p => p.StrategyType == (int)BasketPaymentType.MultiBanco)
+                    .Select(p => p.CustomerReceipt)
+                    .Where(r => !string.IsNullOrWhiteSpace(r))
+                : paymentLines?
+                    .Where(p => p.StrategyType == (int)BasketPaymentType.MultiBanco)
+                    .Select(p => p.CustomerReceipt)
+                    .Where(r => !string.IsNullOrWhiteSpace(r));
+
+            var receiptBlocks = BuildMultibancoReceiptBlocks(customerReceipts);
 
             var sections = new List<(FooterBlock? Left, FooterBlock? Right)>();
 
@@ -970,14 +1047,9 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
         }
 
-        private List<FooterBlock> BuildMultibancoReceiptBlocks(IList<BasketPayment>? paymentLines)
+        private List<FooterBlock> BuildMultibancoReceiptBlocks(IEnumerable<string?>? customerReceipts)
         {
             var result = new List<FooterBlock>();
-
-            var customerReceipts = paymentLines?
-                .Where(p => p.StrategyType == (int)BasketPaymentType.MultiBanco)
-                .Select(p => p.CustomerReceipt)
-                .Where(r => !string.IsNullOrWhiteSpace(r));
 
             if (customerReceipts == null)
                 return result;
@@ -1136,7 +1208,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
     {
         string BuildCustomReceipt(Stores store, string customReceiptBase64);
 
-        string BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate);
+        ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate);
 
         string BuildSuspendedBasketReceipt(Basket? basket, bool withArticles);
     }
