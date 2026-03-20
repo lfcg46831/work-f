@@ -328,12 +328,14 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             var source = _configuration.GetValue<string>("Shared") + path;
 
-            float pw = (float)172.071;
-            float ph = (float)53.01599;
-            float lf = (float)211.602;
-            float bt = (float)727.508;
+            const float placeholderWidth = 172.071f;
+            const float placeholderHeight = 53.01599f;
+            const float leftMargin = 20f;
+            const float topMargin = 20f;
+            var pageHeight = canvas.GetDocument().GetDefaultPageSize().GetHeight();
+            var bottom = pageHeight - topMargin - placeholderHeight;
 
-            this.DrawImage(canvas, source, pw, ph, lf, bt);
+            DrawImage(canvas, source, placeholderWidth, placeholderHeight, leftMargin, bottom);
         }
 
         #endregion
@@ -543,8 +545,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
 
             WriteText(canvas, font, 324, 749, 8, docName);
-            WriteText(canvas, font, 535, 749, 8, "Pag. ");
-            WriteText(canvas, font, 565, 749, 8, pageIndex.ToString());
+            DrawPageNumber(canvas, font, pageIndex, 8);
             WriteText(canvas, font, 324, 735, 8, docDate);
             WriteText(canvas, font, 420, 735, 8, invoiceNumber);
 
@@ -784,8 +785,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
         private static void DrawTransactionReceiptPageNumber(PdfCanvas canvas, PdfFont font, int pageIndex)
         {
-            WriteText(canvas, font, 535, 772, 7, "Pag.");
-            WriteTextRightAligned(canvas, font, 565, 772, 7, pageIndex.ToString());
+            DrawPageNumber(canvas, font, pageIndex, 7);
         }
 
         private TransactionBarcodeInfo BuildTransactionBarcodeInfo(Basket basket)
@@ -894,6 +894,13 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                   .MoveText(rightX - textWidth, y)
                   .ShowText(text)
                   .EndText();
+        }
+
+        private static void DrawPageNumber(PdfCanvas canvas, PdfFont font, int pageIndex, float fontSize)
+        {
+            const float rightMargin = 565f;
+            const float bottomMargin = 20f;
+            WriteTextRightAligned(canvas, font, rightMargin, bottomMargin, fontSize, $"Pag. {pageIndex}");
         }
 
         private static void WriteQrCode(PdfCanvas canvas, PdfFont font, string atcud, string content, float x, float y, float size = 100)
