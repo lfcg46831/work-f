@@ -274,10 +274,9 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             var vatIdentifiersByCode = new Dictionary<int, string?>();
             var pageIndex = 1;
 
-            var (page, canvas) = CreateTransactionReceiptPage(pdfDoc, font, transactionBarcodeInfo, pageIndex, drawLogotype: true);
+            var (page, canvas) = CreateTransactionReceiptPage(pdfDoc, font, transactionBarcodeInfo, pageIndex);
 
-            const float firstPageStartY = 600f;
-            const float continuationPageStartY = 752f;
+            const float firstPageStartY = 752f;
             const float lineHeight = 8f;
             const float minY = 50f;
             float startY = firstPageStartY;
@@ -300,11 +299,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                     ref startY,
                     lineHeight,
                     minY,
-                    continuationPageStartY);
+                    firstPageStartY);
             }
 
             startY -= lineHeight * 2;
-            EnsureTransactionReceiptPageBreak(pdfDoc, font, transactionBarcodeInfo, ref pageIndex, ref page, ref canvas, ref startY, minY, continuationPageStartY);
+            EnsureTransactionReceiptPageBreak(pdfDoc, font, transactionBarcodeInfo, ref pageIndex, ref page, ref canvas, ref startY, minY, firstPageStartY);
             WriteTextCentered(canvas, boldFont, startY, "** TRANSAÇÃO GRAVADA **", 10);
             startY -= lineHeight * 2;
             WriteTextCentered(canvas, font, startY, $"Atendido por: {transactionBarcodeInfo.OperatorName}");
@@ -537,17 +536,17 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             if (isSecondWay)
             {
-                WriteTextRightAligned(canvas, boldFont, 500, 769, 7, isDuplicate ? "2ª Via Original" : "2ª Via Duplicado");
+                WriteTextRightAligned(canvas, boldFont, 550, 769, 7, isDuplicate ? "2ª Via Original" : "2ª Via Duplicado");
             }
             else
             {
-                WriteTextRightAligned(canvas, boldFont, 500, 769, 7, isDuplicate ? "Original" : "Duplicado");
+                WriteTextRightAligned(canvas, boldFont, 550, 769, 7, isDuplicate ? "Original" : "Duplicado");
             }
 
             WriteText(canvas, font, 324, 749, 8, docName);
-            DrawPageNumber(canvas, font, pageIndex, 8);
-            WriteText(canvas, font, 324, 735, 8, docDate);
-            WriteText(canvas, font, 420, 735, 8, invoiceNumber);
+            DrawPageNumber(canvas, font, 565, 749, pageIndex, 8);
+            WriteText(canvas, font, 324, 734, 8, docDate);
+            WriteText(canvas, font, 420, 734, 8, invoiceNumber);
 
             WriteText(canvas, font, 310, 700, 8, payerName);
             WriteText(canvas, font, 310, 690, 8, payerAddress);
@@ -623,12 +622,12 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                         case (short)ArticleType.Unit:
                             bool showBreakdown = item.ArticleType == (short)ArticleType.Weigth || item.Quantity > 1;
 
-                            WriteText(canvas, font, 30, startY, 7, vatDisplay);
-                            WriteText(canvas, font, 70, startY, 7, descDisplay);
+                            WriteText(canvas, font, 70, startY, 7, vatDisplay);
+                            WriteText(canvas, font, 110, startY, 7, descDisplay);
 
                             if (!showBreakdown)
                             {
-                                WriteText(canvas, font, 450, startY, 7, totalDisplay);
+                                WriteTextRightAligned(canvas, font, 470, startY, 7, totalDisplay);
                                 startY -= lineHeight;
                             }
                             else
@@ -638,8 +637,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                                 string qtyFormat = item.ArticleType == (short)ArticleType.Weigth ? "#0.000" : "#0";
                                 string qtyDisplay = $"{item.Quantity.ToString(qtyFormat)} X {item.UnitPrice:F2}";
 
-                                WriteText(canvas, font, 100, startY, 7, qtyDisplay);
-                                WriteText(canvas, font, 450, startY, 7, totalDisplay);
+                                WriteText(canvas, font, 140, startY, 7, qtyDisplay);
+                                WriteTextRightAligned(canvas, font, 470, startY, 7, totalDisplay);
                                 startY -= lineHeight;
                             }
                             break;
@@ -658,7 +657,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                         foreach (var metadata in item.Metadata)
                         {
                             EnsureTransactionReceiptPageBreak(pdfDoc, font, transactionBarcodeInfo, ref pageIndex, ref page, ref canvas, ref startY, minY, resetY);
-                            WriteText(canvas, font, 80, startY, 7, $"{metadata.Description}: {metadata.Value}");
+                            WriteText(canvas, font, 120, startY, 7, $"{metadata.Description}: {metadata.Value}");
                             startY -= lineHeight;
                         }
                     }
@@ -666,8 +665,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                     if (TryGetSuspendedArticleDiscount(item, out var immediateDiscount))
                     {
                         EnsureTransactionReceiptPageBreak(pdfDoc, font, transactionBarcodeInfo, ref pageIndex, ref page, ref canvas, ref startY, minY, resetY);
-                        WriteText(canvas, font, 100, startY, 7, "Poupança Imediata");
-                        WriteText(canvas, font, 450, startY, 7, $"({immediateDiscount:F2})");
+                        WriteText(canvas, font, 140, startY, 7, "Poupança Imediata");
+                        WriteTextRightAligned(canvas, font, 470, startY, 7, $"({immediateDiscount:F2})");
                         startY -= lineHeight;
                     }
                 }
@@ -747,19 +746,14 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             PdfDocument pdfDoc,
             PdfFont font,
             TransactionBarcodeInfo transactionBarcodeInfo,
-            int pageIndex,
-            bool drawLogotype)
+            int pageIndex)
         {
             var page = pdfDoc.AddNewPage();
             var canvas = new PdfCanvas(page);
 
-            if (drawLogotype)
-            {
-                DrawLogotype(canvas);
-            }
-
+            DrawLogotype(canvas);
             DrawTransactionBarcode(pdfDoc, page, canvas, font, transactionBarcodeInfo);
-            DrawTransactionReceiptPageNumber(canvas, font, pageIndex);
+            DrawPageNumber(canvas, font, 565, 20, pageIndex, 7);
 
             return (page, canvas);
         }
@@ -779,13 +773,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 return;
 
             pageIndex++;
-            (page, canvas) = CreateTransactionReceiptPage(pdfDoc, font, transactionBarcodeInfo, pageIndex, drawLogotype: false);
+            (page, canvas) = CreateTransactionReceiptPage(pdfDoc, font, transactionBarcodeInfo, pageIndex);
             startY = resetY;
-        }
-
-        private static void DrawTransactionReceiptPageNumber(PdfCanvas canvas, PdfFont font, int pageIndex)
-        {
-            DrawPageNumber(canvas, font, pageIndex, 7);
         }
 
         private TransactionBarcodeInfo BuildTransactionBarcodeInfo(Basket basket)
@@ -855,10 +844,10 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             imgCanvas.Add(img);
 
             WriteText(canvas, font, 420, 790, 6, transactionBarcodeInfo.TransactionNumber);
-            WriteText(canvas, font, 447, 790, 6, transactionBarcodeInfo.TransactionOccurredAtDisplay);
-            WriteText(canvas, font, 501, 790, 6, transactionBarcodeInfo.OperatorCode);
-            WriteText(canvas, font, 521, 790, 6, transactionBarcodeInfo.PosCode);
-            WriteText(canvas, font, 543, 790, 6, transactionBarcodeInfo.StoreCode);
+            WriteText(canvas, font, 446, 790, 6, transactionBarcodeInfo.TransactionOccurredAtDisplay);
+            WriteText(canvas, font, 507, 790, 6, transactionBarcodeInfo.OperatorCode);
+            WriteText(canvas, font, 525, 790, 6, transactionBarcodeInfo.PosCode);
+            WriteText(canvas, font, 547, 790, 6, transactionBarcodeInfo.StoreCode);
         }
 
         private static void WriteText(PdfCanvas canvas, PdfFont font, float x, float y, float fontSize, string? text)
@@ -896,11 +885,9 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                   .EndText();
         }
 
-        private static void DrawPageNumber(PdfCanvas canvas, PdfFont font, int pageIndex, float fontSize)
+        private static void DrawPageNumber(PdfCanvas canvas, PdfFont font, float rightX, float y, int pageIndex, float fontSize)
         {
-            const float rightMargin = 565f;
-            const float bottomMargin = 20f;
-            WriteTextRightAligned(canvas, font, rightMargin, bottomMargin, fontSize, $"Pag. {pageIndex}");
+            WriteTextRightAligned(canvas, font, rightX, y, fontSize, $"Pag. {pageIndex}");
         }
 
         private static void WriteQrCode(PdfCanvas canvas, PdfFont font, string atcud, string content, float x, float y, float size = 100)
