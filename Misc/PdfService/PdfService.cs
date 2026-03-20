@@ -85,16 +85,19 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 return string.Empty;
             }
 
-            var page = pdfDoc.AddNewPage();
-            var canvas = new PdfCanvas(page);
-
-            DrawLogotype(canvas);
-
             const float lineHeight = 8f;
             const float fontSize = 7f;
             const float firstPageHeaderY = 655f;
             const float otherPagesStartY = 800f;
             const float minY = 50f;
+
+            var pageIndex = 1;
+            var page = pdfDoc.AddNewPage();
+            var canvas = new PdfCanvas(page);
+
+            DrawLogotype(canvas);
+            DrawPageNumber(canvas, font, 565, 20, pageIndex, fontSize);
+
             var receiptBlockWidth = CalculateFooterBlockWidth(font, block, fontSize);
             var receiptLeftX = CalculateCenteredBlockLeftX(canvas, receiptBlockWidth);
 
@@ -108,8 +111,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             {
                 if (currentY < minY)
                 {
+                    pageIndex++;
                     page = pdfDoc.AddNewPage();
                     canvas = new PdfCanvas(page);
+                    DrawLogotype(canvas);
+                    DrawPageNumber(canvas, font, 565, 20, pageIndex, fontSize);
                     currentY = otherPagesStartY;
                 }
 
