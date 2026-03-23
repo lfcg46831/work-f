@@ -32,7 +32,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         IStructureService structureService,
         IVatReasonsService vatReasonsService,
         IReceiptPrintPolicy receiptPrintPolicy,
-        IVatService vatService) : IPdfService
+        IVatService vatService,
+        ITenderService tenderService) : IPdfService
     {
         private sealed class FooterBlock
         {
@@ -69,6 +70,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         private readonly IVatReasonsService _vatReasonsService = vatReasonsService;
         private readonly IReceiptPrintPolicy _receiptPrintPolicy = receiptPrintPolicy;
         private readonly IVatService _vatService = vatService;
+        private readonly ITenderService _tenderService = tenderService;
 
         #region Public methods
 
@@ -319,6 +321,35 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             pdfDoc.Close();
 
             return Convert.ToBase64String(ms.ToArray());
+        }
+
+        public ReceiptResponse BuildReceiptBoxControl(List<BoxControl> boxControl, int operatorCode, long transactionNumber)
+        {
+            using var ms = new MemoryStream();
+            using var writer = new PdfWriter(ms);
+            using var pdfDoc = new PdfDocument(writer);
+
+            PdfFont font = PdfFontFactory.CreateFont(StandardFonts.COURIER);
+            PdfFont boldFont = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
+
+            var pageIndex = 1;
+
+            DrawBoxControlReceiptPage(
+                pdfDoc,
+                font,
+                boldFont,
+                boxControl,
+                operatorCode,
+                transactionNumber,
+                ref pageIndex);
+
+            pdfDoc.Close();
+
+            return new ReceiptResponse()
+            {
+                ReceiptContent = Convert.ToBase64String(ms.ToArray()),
+                ReceiptContentType = "application/pdf"
+            };
         }
 
         public ReceiptResponse BuildReceiptWithdrawal(
@@ -1534,6 +1565,80 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             WriteText(canvas, font, 50, 37, 6, obs);
         }
 
+        private void DrawBoxControlReceiptPage(
+            PdfDocument pdfDoc,
+            PdfFont font,
+            PdfFont boldFont,
+            List<BoxControl> boxControl,
+            int operatorCode,
+            long transactionNumber,
+            ref int pageIndex)
+        {
+            const float lineHeight = 12f;
+            const float minY = 60f;
+            const float resetY = 740f;
+
+            var page = AddWithdrawalPage(pdfDoc, font, ref pageIndex, out var canvas);
+            float currentY = resetY;
+
+            var totalStoreCode = _configuration.GetValue<int>("TotalStoreCode");
+            var totalPosCode = _configuration.GetValue<int>("TotalPosCode");
+            var tenders = _tenderService.GetTenders();
+
+            currentY = WriteBoxControlHeader(canvas, boldFont, page, currentY, lineHeight, false);
+
+            foreach (var item in boxControl)
+            {
+                var payment = tenders?.FirstOrDefault(x => x.Code == (int)item.PaymentType);
+                var paymentName = payment?.Name?.ToUpper() ?? item.PaymentType.ToString();
+
+                if (EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight * 2f))
+                {
+                    currentY = WriteBoxControlHeader(canvas, boldFont, page, currentY, lineHeight, true);
+                }
+
+                WriteText(canvas, font, 40, currentY, 9, paymentName);
+                WriteTextRightAligned(canvas, font, 360, currentY, 9, Strings.Format(item.SangriaAmount, "F2"));
+                WriteTextRightAligned(canvas, font, 520, currentY, 9, Strings.Format(item.PaymentAmount, "F2"));
+                currentY -= lineHeight;
+
+                if (item.ReturnAmount < 0)
+                {
+                    WriteText(canvas, font, 40, currentY, 9, paymentName);
+                    WriteTextRightAligned(canvas, font, 360, currentY, 9, Strings.Format(item.SangriaAmount, "F2"));
+                    WriteTextRightAligned(canvas, font, 520, currentY, 9, Strings.Format(item.ReturnAmount, "F2"));
+                    currentY -= lineHeight;
+                }
+            }
+
+            EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight * 3f);
+
+            DrawSimpleSeparator(canvas, page, currentY);
+            currentY -= lineHeight * 1.5f;
+
+            WriteText(
+                canvas,
+                font,
+                40,
+                currentY,
+                8,
+                $"{transactionNumber:D6} {DateTime.Now:yyyy-MM-dd HH:mm} {operatorCode:D4} {totalPosCode:D4} {totalStoreCode:D4}");
+        }
+
+        private static float WriteBoxControlHeader(PdfCanvas canvas, PdfFont boldFont, PdfPage page, float currentY, float lineHeight, bool isContinuation)
+        {
+            WriteTextCentered(canvas, boldFont, currentY, isContinuation ? "CONTROLO DE CAIXA (cont.)" : "CONTROLO DE CAIXA", 10);
+            currentY -= lineHeight * 1.5f;
+
+            WriteText(canvas, boldFont, 40, currentY, 9, "FORMA PAGAMENTO");
+            WriteTextRightAligned(canvas, boldFont, 360, currentY, 9, "SANGRIA");
+            WriteTextRightAligned(canvas, boldFont, 520, currentY, 9, "PAGAMENTO");
+            currentY -= lineHeight;
+
+            DrawSimpleSeparator(canvas, page, currentY);
+            return currentY - lineHeight;
+        }
+
         private void DrawWithdrawalDrawerReceiptPage(
             PdfDocument pdfDoc,
             PdfFont font,
@@ -2546,6 +2651,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         string BuildCustomReceipt(Stores store, string customReceiptBase64);
 
         ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate);
+
+        ReceiptResponse BuildReceiptBoxControl(List<BoxControl> boxControl, int operatorCode, long transactionNumber);
 
         ReceiptResponse BuildReceiptWithdrawal(
             Stores? store,
