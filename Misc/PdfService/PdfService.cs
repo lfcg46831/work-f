@@ -343,6 +343,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             var safePreviousBoxControl = previousBoxControl ?? [];
             var safeAutomaticWithdrawal = automaticWithdrawal ?? [];
 
+            var pageIndex = 1;
+
             DrawWithdrawalDrawerReceiptPage(
                 pdfDoc,
                 font,
@@ -356,7 +358,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 withdrawalAbandoned,
                 safeAutomaticWithdrawal,
                 tenders,
-                1);
+                ref pageIndex);
 
             DrawWithdrawalEsegurReceiptPage(
                 pdfDoc,
@@ -372,7 +374,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 safePreviousBoxControl,
                 safeAutomaticWithdrawal,
                 tenders,
-                2);
+                ref pageIndex);
 
             pdfDoc.Close();
 
@@ -1447,21 +1449,20 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             bool withdrawalAbandoned,
             List<BasketPayment> automaticWithdrawal,
             List<Tenders> tenders,
-            int pageIndex)
+            ref int pageIndex)
         {
-            var page = pdfDoc.AddNewPage(PageSize.A4);
-            var canvas = new PdfCanvas(page);
-
             const float lineHeight = 12f;
-            float currentY = 800f;
+            const float minY = 60f;
+            const float resetY = 740f;
+
+            var page = AddWithdrawalPage(pdfDoc, font, ref pageIndex, out var canvas);
+            float currentY = resetY;
             var storeName = store?.Name?.Trim() ?? string.Empty;
             var storeCode = store?.Code ?? 0;
             var operatorName = operatorLogged?.Name ?? string.Empty;
             var operatorCode = operatorLogged?.Code ?? 0;
             var total = CalculateWithdrawalTotal(withdrawalReceipt);
             var checkDigit = BuildWithdrawalCheckDigit(withdrawalReceipt, storeCode, total, appendCheckDigit: false);
-
-            DrawPageNumber(canvas, font, 565, 20, pageIndex, 8);
 
             WriteTextCentered(canvas, boldFont, currentY, storeName, 10);
             currentY -= lineHeight * 1.5f;
@@ -1490,16 +1491,24 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             currentY -= lineHeight * 1.2f;
 
             currentY = WriteWithdrawalSummaryLines(
-                page,
-                canvas,
+                pdfDoc,
+                ref page,
+                ref canvas,
                 font,
+                boldFont,
+                ref pageIndex,
                 currentY,
                 tenders,
                 withdrawalReceipt,
                 endOfShift,
-                automaticWithdrawal);
+                automaticWithdrawal,
+                minY,
+                resetY,
+                "TOTAL DE SANGRIAS");
 
             currentY -= lineHeight;
+
+            EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight * 7f);
 
             WriteText(canvas, font, 40, currentY, 9, $"CHECK DIGIT: {checkDigit}");
             currentY -= lineHeight * 1.5f;
@@ -1530,21 +1539,20 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             List<BoxControl> previousBoxControl,
             List<BasketPayment> automaticWithdrawal,
             List<Tenders> tenders,
-            int pageIndex)
+            ref int pageIndex)
         {
-            var page = pdfDoc.AddNewPage(PageSize.A4);
-            var canvas = new PdfCanvas(page);
-
             const float lineHeight = 12f;
-            float currentY = 800f;
+            const float minY = 60f;
+            const float resetY = 740f;
+
+            var page = AddWithdrawalPage(pdfDoc, font, ref pageIndex, out var canvas);
+            float currentY = resetY;
             var storeName = store?.Name?.Trim() ?? string.Empty;
             var storeCode = store?.Code ?? 0;
             var operatorCode = operatorLogged?.Code ?? 0;
             var total = CalculateWithdrawalTotal(withdrawalReceipt);
             var barcode = BuildWithdrawalCheckDigit(withdrawalReceipt, storeCode, total, appendCheckDigit: true);
             var checkDigit = barcode[^2..];
-
-            DrawPageNumber(canvas, font, 565, 20, pageIndex, 8);
 
             WriteTextCentered(canvas, boldFont, currentY, storeName, 10);
             currentY -= lineHeight * 1.5f;
@@ -1582,43 +1590,105 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             DrawSimpleSeparator(canvas, page, currentY);
             currentY -= lineHeight;
-            WriteTextCentered(canvas, boldFont, currentY, "SANGRIAS AUTOMÁTICAS", 9);
-            currentY -= lineHeight * 1.2f;
+            currentY = WriteWithdrawalSectionHeader(canvas, boldFont, currentY, "SANGRIAS AUTOMÁTICAS", lineHeight);
 
-            currentY = WriteAutomaticWithdrawalLines(canvas, font, currentY, automaticWithdrawal, tenders, previousBoxControl.Any());
+            currentY = WriteAutomaticWithdrawalLines(
+                pdfDoc,
+                ref page,
+                ref canvas,
+                font,
+                boldFont,
+                ref pageIndex,
+                currentY,
+                automaticWithdrawal,
+                tenders,
+                previousBoxControl.Any(),
+                minY,
+                resetY,
+                "SANGRIAS AUTOMÁTICAS");
 
+            EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight * 3f);
             DrawSimpleSeparator(canvas, page, currentY);
             currentY -= lineHeight;
-            WriteTextCentered(canvas, boldFont, currentY, "SANGRIAS MANUAIS", 9);
-            currentY -= lineHeight * 1.2f;
+            currentY = WriteWithdrawalSectionHeader(canvas, boldFont, currentY, "SANGRIAS MANUAIS", lineHeight);
 
             if (withdrawalReceipt.WithrawalSequence != null && withdrawalReceipt.WithrawalSequence.Any())
             {
-                currentY = WriteManualWithdrawalLines(canvas, font, currentY, withdrawalReceipt, tenders, endOfShift);
+                currentY = WriteManualWithdrawalLines(
+                    pdfDoc,
+                    ref page,
+                    ref canvas,
+                    font,
+                    boldFont,
+                    ref pageIndex,
+                    currentY,
+                    withdrawalReceipt,
+                    tenders,
+                    endOfShift,
+                    minY,
+                    resetY,
+                    "SANGRIAS MANUAIS");
                 DrawSimpleSeparator(canvas, page, currentY);
                 currentY -= lineHeight;
             }
 
             if (previousBoxControl.Any())
             {
-                WriteTextCentered(canvas, boldFont, currentY, "Histórico de Sangrias do Turno", 9);
-                currentY -= lineHeight * 1.2f;
-                currentY = WritePreviousWithdrawalLines(canvas, font, currentY, previousBoxControl);
+                EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight * 3f);
+                currentY = WriteWithdrawalSectionHeader(canvas, boldFont, currentY, "Histórico de Sangrias do Turno", lineHeight);
+                currentY = WritePreviousWithdrawalLines(
+                    pdfDoc,
+                    ref page,
+                    ref canvas,
+                    font,
+                    boldFont,
+                    ref pageIndex,
+                    currentY,
+                    previousBoxControl,
+                    minY,
+                    resetY,
+                    "Histórico de Sangrias do Turno");
                 DrawSimpleSeparator(canvas, page, currentY);
                 currentY -= lineHeight;
             }
 
-            WriteTextCentered(canvas, boldFont, currentY, "TOTAL DE SANGRIAS", 9);
-            currentY -= lineHeight * 1.2f;
+            EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight * 3f);
+            currentY = WriteWithdrawalSectionHeader(canvas, boldFont, currentY, "TOTAL DE SANGRIAS", lineHeight);
 
             if (previousBoxControl.Any())
             {
-                currentY = WriteAutomaticWithdrawalLines(canvas, font, currentY, automaticWithdrawal, tenders, true);
+                currentY = WriteAutomaticWithdrawalLines(
+                    pdfDoc,
+                    ref page,
+                    ref canvas,
+                    font,
+                    boldFont,
+                    ref pageIndex,
+                    currentY,
+                    automaticWithdrawal,
+                    tenders,
+                    true,
+                    minY,
+                    resetY,
+                    "TOTAL DE SANGRIAS");
             }
 
             if (withdrawalReceipt.WithrawalSequence != null && withdrawalReceipt.WithrawalSequence.Any())
             {
-                currentY = WriteManualWithdrawalLines(canvas, font, currentY, withdrawalReceipt, tenders, endOfShift);
+                currentY = WriteManualWithdrawalLines(
+                    pdfDoc,
+                    ref page,
+                    ref canvas,
+                    font,
+                    boldFont,
+                    ref pageIndex,
+                    currentY,
+                    withdrawalReceipt,
+                    tenders,
+                    endOfShift,
+                    minY,
+                    resetY,
+                    "TOTAL DE SANGRIAS");
                 DrawSimpleSeparator(canvas, page, currentY);
                 currentY -= lineHeight;
             }
@@ -1628,6 +1698,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             {
                 totalToDisplay += Convert.ToDecimal(endOfShift.DrawerFund) + automaticWithdrawal.Sum(sequence => sequence.Amount);
             }
+
+            EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight * 7f);
 
             WriteText(canvas, boldFont, 40, currentY, 9, $"TOTAL: {totalToDisplay:F2}");
             currentY -= lineHeight;
@@ -1644,6 +1716,43 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 currentY,
                 8,
                 $"{transactionNumber:D6} {DateTime.Now:yyyy-MM-dd HH:mm} {operatorCode:D4} {posCode:D4} {storeCode:D4}");
+        }
+
+        private PdfPage AddWithdrawalPage(PdfDocument pdfDoc, PdfFont font, ref int pageIndex, out PdfCanvas canvas)
+        {
+            var page = pdfDoc.AddNewPage(PageSize.A4);
+            canvas = new PdfCanvas(page);
+            DrawLogotype(canvas);
+            DrawPageNumber(canvas, font, 565, 20, pageIndex, 8);
+            pageIndex++;
+            return page;
+        }
+
+        private bool EnsureWithdrawalPageSpace(
+            PdfDocument pdfDoc,
+            PdfFont font,
+            ref int pageIndex,
+            ref PdfPage page,
+            ref PdfCanvas canvas,
+            ref float currentY,
+            float minY,
+            float resetY,
+            float requiredHeight = 0f)
+        {
+            if (currentY - requiredHeight >= minY)
+            {
+                return false;
+            }
+
+            page = AddWithdrawalPage(pdfDoc, font, ref pageIndex, out canvas);
+            currentY = resetY;
+            return true;
+        }
+
+        private static float WriteWithdrawalSectionHeader(PdfCanvas canvas, PdfFont boldFont, float currentY, string title, float lineHeight)
+        {
+            WriteTextCentered(canvas, boldFont, currentY, title, 9);
+            return currentY - (lineHeight * 1.2f);
         }
 
         private static void DrawSimpleSeparator(PdfCanvas canvas, PdfPage page, float y)
@@ -1669,14 +1778,20 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         }
 
         private float WriteWithdrawalSummaryLines(
-            PdfPage page,
-            PdfCanvas canvas,
+            PdfDocument pdfDoc,
+            ref PdfPage page,
+            ref PdfCanvas canvas,
             PdfFont font,
+            PdfFont boldFont,
+            ref int pageIndex,
             float currentY,
             List<Tenders> tenders,
             WithdrawalReceipt withdrawalReceipt,
             EndOfShift endOfShift,
-            List<BasketPayment> automaticWithdrawal)
+            List<BasketPayment> automaticWithdrawal,
+            float minY,
+            float resetY,
+            string sectionTitle)
         {
             const float lineHeight = 12f;
             decimal totalManual = 0;
@@ -1686,6 +1801,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             {
                 foreach (var withrawalSequence in withdrawalReceipt.WithrawalSequence)
                 {
+                    if (EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight))
+                    {
+                        currentY = WriteWithdrawalSectionHeader(canvas, boldFont, currentY, $"{sectionTitle} (cont.)", lineHeight);
+                    }
+
                     totalManual += decimal.Round(withrawalSequence.Totality, 2);
 
                     var payment = tenders.FirstOrDefault(x => x.Code == (int)withrawalSequence.Type);
@@ -1710,6 +1830,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                         paymentTypeTotal += (decimal)withdrawal.TotalToPay;
                     }
 
+                    if (EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight))
+                    {
+                        currentY = WriteWithdrawalSectionHeader(canvas, boldFont, currentY, $"{sectionTitle} (cont.)", lineHeight);
+                    }
+
                     var payment = tenders.FirstOrDefault(x => x.Code == (int)groupedWithdrawal.Key);
                     var paymentName = payment?.Name?.ToUpper() ?? string.Empty;
 
@@ -1720,26 +1845,36 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 }
             }
 
+            EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight * 2f);
             DrawSimpleSeparator(canvas, page, currentY);
 
             var total = totalManual + totalAutomatic;
+            EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight);
             WriteText(canvas, font, 40, currentY, 9, $"TOTAL: {Strings.Format(total, "F2")}");
 
             return currentY - lineHeight;
         }
 
         private float WriteAutomaticWithdrawalLines(
-            PdfCanvas canvas,
+            PdfDocument pdfDoc,
+            ref PdfPage page,
+            ref PdfCanvas canvas,
             PdfFont font,
+            PdfFont boldFont,
+            ref int pageIndex,
             float currentY,
             List<BasketPayment> automaticWithdrawal,
             List<Tenders> tenders,
-            bool includeBreakdown)
+            bool includeBreakdown,
+            float minY,
+            float resetY,
+            string sectionTitle)
         {
             const float lineHeight = 12f;
 
             if (!includeBreakdown || automaticWithdrawal == null || automaticWithdrawal.Count == 0)
             {
+                EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight);
                 WriteText(canvas, font, 40, currentY, 9, "TOTAL: 0.00");
                 return currentY - lineHeight;
             }
@@ -1758,6 +1893,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                     paymentTypeTotal += withdrawal.TotalToPay;
                 }
 
+                if (EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight))
+                {
+                    currentY = WriteWithdrawalSectionHeader(canvas, boldFont, currentY, $"{sectionTitle} (cont.)", lineHeight);
+                }
+
                 var payment = tenders.FirstOrDefault(x => x.Code == (int)groupedWithdrawal.Key);
                 var paymentName = payment?.Name?.ToUpper() ?? string.Empty;
 
@@ -1769,17 +1909,25 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 total += paymentTypeTotal;
             }
 
+            EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight);
             WriteText(canvas, font, 40, currentY, 9, $"TOTAL: {Strings.Format(total, "F2")}");
             return currentY - lineHeight;
         }
 
         private float WriteManualWithdrawalLines(
-            PdfCanvas canvas,
+            PdfDocument pdfDoc,
+            ref PdfPage page,
+            ref PdfCanvas canvas,
             PdfFont font,
+            PdfFont boldFont,
+            ref int pageIndex,
             float currentY,
             WithdrawalReceipt withdrawalReceipt,
             List<Tenders> tenders,
-            EndOfShift endOfShift)
+            EndOfShift endOfShift,
+            float minY,
+            float resetY,
+            string sectionTitle)
         {
             const float lineHeight = 12f;
             decimal total = 0;
@@ -1788,6 +1936,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             {
                 foreach (var withrawalSequence in withdrawalReceipt.WithrawalSequence)
                 {
+                    if (EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight))
+                    {
+                        currentY = WriteWithdrawalSectionHeader(canvas, boldFont, currentY, $"{sectionTitle} (cont.)", lineHeight);
+                    }
+
                     total += decimal.Round(withrawalSequence.Totality, 2);
 
                     var payment = tenders.FirstOrDefault(x => x.Code == (int)withrawalSequence.Type);
@@ -1803,25 +1956,39 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             if (endOfShift.IsDrawerFundAdded && endOfShift.EndOfShiftActive)
             {
+                EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight);
                 WriteText(canvas, font, 40, currentY, 9, $"FUNDO DE CAIXA {Strings.Format(endOfShift.DrawerFund, "F2")}");
                 currentY -= lineHeight;
                 total += Convert.ToDecimal(endOfShift.DrawerFund);
             }
 
+            EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight);
             WriteText(canvas, font, 40, currentY, 9, $"TOTAL: {Strings.Format(total, "F2")}");
             return currentY - lineHeight;
         }
 
-        private static float WritePreviousWithdrawalLines(
-            PdfCanvas canvas,
+        private float WritePreviousWithdrawalLines(
+            PdfDocument pdfDoc,
+            ref PdfPage page,
+            ref PdfCanvas canvas,
             PdfFont font,
+            PdfFont boldFont,
+            ref int pageIndex,
             float currentY,
-            List<BoxControl> previousBoxControl)
+            List<BoxControl> previousBoxControl,
+            float minY,
+            float resetY,
+            string sectionTitle)
         {
             const float lineHeight = 12f;
 
             foreach (var boxControl in previousBoxControl)
             {
+                if (EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight))
+                {
+                    currentY = WriteWithdrawalSectionHeader(canvas, boldFont, currentY, $"{sectionTitle} (cont.)", lineHeight);
+                }
+
                 WriteText(canvas, font, 40, currentY, 9, boxControl.SafebagNumber);
                 WriteTextRightAligned(canvas, font, 520, currentY, 9, Strings.Format(boxControl.SangriaAmount, "F2"));
                 currentY -= lineHeight;
