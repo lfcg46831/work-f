@@ -20,6 +20,7 @@ using TotalCheckoutPOS.Services.POS.Api.Domain.Enum;
 using TotalCheckoutPOS.Services.POS.Api.Domain.Helpers;
 using TotalCheckoutPOS.Services.POS.Api.Domain.Models;
 using TotalCheckoutPOS.Services.POS.Api.Domain.Models.Article;
+using TotalCheckoutPOS.Services.POS.Api.Domain.Models.ExtraordinaryRevenues;
 using TotalCheckoutPOS.Services.POS.Api.Domain.Models.Receipts;
 using TotalCheckoutPOS.Services.POS.Api.Domain.Utilities;
 
@@ -387,6 +388,55 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             };
 
             return result;
+        }
+
+        public ReceiptResponse BuildAbandonExtraordinaryRevenuesReceipts(
+            ExtraordinaryRevenue extraordinaryRevenue,
+            Operators operatorLogged,
+            Stores store,
+            long transactionNumber,
+            int posCode)
+        {
+            using var ms = new MemoryStream();
+            using var writer = new PdfWriter(ms);
+            using var pdfDoc = new PdfDocument(writer);
+
+            PdfFont font = PdfFontFactory.CreateFont(StandardFonts.COURIER);
+            PdfFont boldFont = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
+
+            var pageIndex = 1;
+
+            DrawAbandonExtraordinaryRevenuesDrawerReceiptPage(
+                pdfDoc,
+                font,
+                boldFont,
+                extraordinaryRevenue,
+                operatorLogged,
+                store,
+                transactionNumber,
+                posCode,
+                ref pageIndex);
+
+            DrawAbandonExtraordinaryRevenuesEsegurReceiptPage(
+                pdfDoc,
+                font,
+                boldFont,
+                extraordinaryRevenue,
+                operatorLogged,
+                store,
+                transactionNumber,
+                posCode,
+                ref pageIndex);
+
+            pdfDoc.Close();
+
+            var receipt = Convert.ToBase64String(ms.ToArray());
+
+            return new ReceiptResponse()
+            {
+                ReceiptContent = receipt,
+                ReceiptContentType = "application/pdf"
+            };
         }
 
         private void DrawLogotype(PdfCanvas canvas)
@@ -2028,6 +2078,248 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             return (sum % 99).ToString("D2");
         }
 
+        private void DrawAbandonExtraordinaryRevenuesDrawerReceiptPage(
+            PdfDocument pdfDoc,
+            PdfFont font,
+            PdfFont boldFont,
+            ExtraordinaryRevenue extraordinaryRevenue,
+            Operators operatorLogged,
+            Stores store,
+            long transactionNumber,
+            int posCode,
+            ref int pageIndex)
+        {
+            const float lineHeight = 12f;
+            const float minY = 60f;
+            const float resetY = 740f;
+
+            var page = AddWithdrawalPage(pdfDoc, font, ref pageIndex, out var canvas);
+            float currentY = resetY;
+            var storeName = store.Name?.Trim() ?? string.Empty;
+            var storeCode = store.Code;
+            var operatorCode = operatorLogged.Code;
+            var operatorName = operatorLogged.Name?.Trim() ?? string.Empty;
+            var total = CalculateExtraordinaryRevenueTotal(extraordinaryRevenue);
+            var checkDigit = BuildExtraordinaryRevenueCheckDigit(extraordinaryRevenue, storeCode, total, appendCheckDigit: false);
+            var barcode = BuildExtraordinaryRevenueCheckDigit(extraordinaryRevenue, storeCode, total, appendCheckDigit: true);
+
+            WriteTextCentered(canvas, boldFont, currentY, storeName, 10);
+            currentY -= lineHeight * 1.5f;
+            WriteTextCentered(canvas, boldFont, currentY, "ABANDONO", 10);
+            currentY -= lineHeight * 1.5f;
+            WriteTextCentered(canvas, boldFont, currentY, "RECEITAS EXTRAORDINÁRIAS", 9);
+            currentY -= lineHeight * 1.5f;
+
+            if (CheckIfExtraordinaryRevenuesHasUpdates(extraordinaryRevenue))
+            {
+                WriteTextCentered(canvas, font, currentY, "** Correcção na Transação **", 9);
+                currentY -= lineHeight * 1.5f;
+            }
+
+            WriteText(canvas, font, 40, currentY, 9, $"{operatorCode:D4} {operatorName}");
+            currentY -= lineHeight;
+            WriteText(canvas, font, 40, currentY, 9, $"SAFEBAG: {extraordinaryRevenue.SafebagNumber}");
+            currentY -= lineHeight;
+            WriteText(canvas, font, 40, currentY, 9, $"{storeCode:D4} {DateTime.Now:yyyy-MM-dd}");
+            currentY -= lineHeight;
+
+            DrawSimpleSeparator(canvas, page, currentY);
+            currentY -= lineHeight;
+            currentY = WriteWithdrawalSectionHeader(canvas, boldFont, currentY, "RECEITAS EXTRAORDINÁRIAS", lineHeight);
+
+            currentY = WriteExtraordinaryRevenueEntries(
+                pdfDoc,
+                ref page,
+                ref canvas,
+                font,
+                boldFont,
+                ref pageIndex,
+                currentY,
+                extraordinaryRevenue,
+                minY,
+                resetY,
+                "RECEITAS EXTRAORDINÁRIAS");
+
+            DrawSimpleSeparator(canvas, page, currentY);
+            currentY -= lineHeight;
+
+            EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight * 10f);
+
+            WriteText(canvas, boldFont, 40, currentY, 9, $"TOTAL: {Strings.Format(total, "F2")}");
+            currentY -= lineHeight;
+            WriteText(canvas, font, 40, currentY, 9, $"CHECK DIGIT: {checkDigit}");
+            currentY -= lineHeight * 1.5f;
+            WriteText(canvas, font, 40, currentY, 9, "Operador:");
+            currentY -= lineHeight * 2f;
+            WriteText(canvas, font, 40, currentY, 9, "Supervisor:");
+            currentY -= lineHeight * 2f;
+
+            DrawBarcode(canvas, pdfDoc, barcode, 170, currentY - 28, 250, 32);
+            currentY -= lineHeight * 4f;
+
+            WriteText(
+                canvas,
+                font,
+                40,
+                currentY,
+                8,
+                $"{transactionNumber:D6} {DateTime.Now:yyyy-MM-dd HH:mm} {operatorCode:D4} {posCode:D4} {storeCode:D4}");
+        }
+
+        private void DrawAbandonExtraordinaryRevenuesEsegurReceiptPage(
+            PdfDocument pdfDoc,
+            PdfFont font,
+            PdfFont boldFont,
+            ExtraordinaryRevenue extraordinaryRevenue,
+            Operators operatorLogged,
+            Stores store,
+            long transactionNumber,
+            int posCode,
+            ref int pageIndex)
+        {
+            const float lineHeight = 12f;
+            const float minY = 60f;
+            const float resetY = 740f;
+
+            var page = AddWithdrawalPage(pdfDoc, font, ref pageIndex, out var canvas);
+            float currentY = resetY;
+            var storeName = store.Name?.Trim() ?? string.Empty;
+            var storeCode = store.Code;
+            var operatorCode = operatorLogged.Code;
+            var total = CalculateExtraordinaryRevenueTotal(extraordinaryRevenue);
+            var barcode = BuildExtraordinaryRevenueCheckDigit(extraordinaryRevenue, storeCode, total, appendCheckDigit: true);
+            var checkDigit = barcode[^2..];
+
+            WriteTextCentered(canvas, boldFont, currentY, storeName, 10);
+            currentY -= lineHeight * 1.5f;
+            WriteTextCentered(canvas, boldFont, currentY, "ABANDONO", 10);
+            currentY -= lineHeight * 1.5f;
+            WriteTextCentered(canvas, boldFont, currentY, "RECEITAS EXTRAORDINÁRIAS", 9);
+            currentY -= lineHeight * 1.5f;
+            WriteTextCentered(canvas, boldFont, currentY, "ESEGUR", 10);
+            currentY -= lineHeight * 1.5f;
+
+            if (CheckIfExtraordinaryRevenuesHasUpdates(extraordinaryRevenue))
+            {
+                WriteTextCentered(canvas, font, currentY, "** Correcção na Transação **", 9);
+                currentY -= lineHeight * 1.5f;
+            }
+
+            DrawBarcode(canvas, pdfDoc, barcode, 170, currentY - 28, 250, 32);
+            currentY -= lineHeight * 8f;
+
+            WriteTextCentered(canvas, font, currentY, $"SAFEBAG: {extraordinaryRevenue.SafebagNumber}", 9);
+            currentY -= lineHeight;
+            WriteTextCentered(canvas, font, currentY, $"{storeCode:D4} {DateTime.Now:yyyy-MM-dd}", 9);
+            currentY -= lineHeight;
+
+            DrawSimpleSeparator(canvas, page, currentY);
+            currentY -= lineHeight;
+            currentY = WriteWithdrawalSectionHeader(canvas, boldFont, currentY, "RECEITAS EXTRAORDINÁRIAS", lineHeight);
+
+            currentY = WriteExtraordinaryRevenueEntries(
+                pdfDoc,
+                ref page,
+                ref canvas,
+                font,
+                boldFont,
+                ref pageIndex,
+                currentY,
+                extraordinaryRevenue,
+                minY,
+                resetY,
+                "RECEITAS EXTRAORDINÁRIAS");
+
+            DrawSimpleSeparator(canvas, page, currentY);
+            currentY -= lineHeight;
+
+            EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight * 7f);
+
+            WriteText(canvas, boldFont, 40, currentY, 9, $"TOTAL: {Strings.Format(total, "F2")}");
+            currentY -= lineHeight;
+            WriteText(canvas, font, 40, currentY, 9, $"CHECK DIGIT: {checkDigit}");
+            currentY -= lineHeight * 1.5f;
+            WriteText(canvas, font, 40, currentY, 9, "Operador:");
+            currentY -= lineHeight * 2f;
+            WriteText(canvas, font, 40, currentY, 9, "Supervisor:");
+            currentY -= lineHeight * 2f;
+            WriteText(
+                canvas,
+                font,
+                40,
+                currentY,
+                8,
+                $"{transactionNumber:D6} {DateTime.Now:yyyy-MM-dd HH:mm} {operatorCode:D4} {posCode:D4} {storeCode:D4}");
+        }
+
+        private float WriteExtraordinaryRevenueEntries(
+            PdfDocument pdfDoc,
+            ref PdfPage page,
+            ref PdfCanvas canvas,
+            PdfFont font,
+            PdfFont boldFont,
+            ref int pageIndex,
+            float currentY,
+            ExtraordinaryRevenue extraordinaryRevenue,
+            float minY,
+            float resetY,
+            string sectionTitle)
+        {
+            const float lineHeight = 12f;
+
+            if (extraordinaryRevenue.ExtraordinaryRevenueEntries == null || extraordinaryRevenue.ExtraordinaryRevenueEntries.Count == 0)
+            {
+                return currentY;
+            }
+
+            foreach (var entry in extraordinaryRevenue.ExtraordinaryRevenueEntries)
+            {
+                if (EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight))
+                {
+                    currentY = WriteWithdrawalSectionHeader(canvas, boldFont, currentY, $"{sectionTitle} (cont.)", lineHeight);
+                }
+
+                WriteText(canvas, font, 40, currentY, 9, entry.ExtraordinaryRevenueOriginName);
+                WriteTextRightAligned(
+                    canvas,
+                    font,
+                    520,
+                    currentY,
+                    9,
+                    $"{entry.ExtraordinaryRevenueSignal}{Strings.Format(entry.ExtraordinaryRevenueAmount, "F2")}");
+                currentY -= lineHeight;
+            }
+
+            return currentY;
+        }
+
+        private static bool CheckIfExtraordinaryRevenuesHasUpdates(ExtraordinaryRevenue extraordinaryRevenue)
+        {
+            return extraordinaryRevenue.ExtraordinaryRevenueEntries?.Any(entry => entry.ExtraordinaryRevenueSignal == "-") == true;
+        }
+
+        private static decimal CalculateExtraordinaryRevenueTotal(ExtraordinaryRevenue extraordinaryRevenue)
+        {
+            return extraordinaryRevenue.ExtraordinaryRevenueEntries?.Sum(entry =>
+                entry.ExtraordinaryRevenueSignal == "-"
+                    ? -entry.ExtraordinaryRevenueAmount
+                    : entry.ExtraordinaryRevenueAmount) ?? 0m;
+        }
+
+        private static string BuildExtraordinaryRevenueCheckDigit(
+            ExtraordinaryRevenue extraordinaryRevenue,
+            int storeCode,
+            decimal total,
+            bool appendCheckDigit)
+        {
+            int totalAsInt = (int)(total * 1000);
+            string formattedTotal = totalAsInt.ToString("0000000");
+            var barcode = extraordinaryRevenue.SafebagNumber + storeCode.ToString("D4") + DateTime.Now.ToString("MMdd") + formattedTotal;
+            var checkDigit = ReturnTwoDigitsCheckDigit(barcode);
+
+            return appendCheckDigit ? barcode + checkDigit : checkDigit;
+        }
+
         #endregion
     }
 
@@ -2048,6 +2340,13 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             List<BoxControl>? previousBoxControl,
             List<BasketPayment>? automaticWithdrawal,
             List<Tenders> tenders);
+
+        ReceiptResponse BuildAbandonExtraordinaryRevenuesReceipts(
+            ExtraordinaryRevenue extraordinaryRevenue,
+            Operators operatorLogged,
+            Stores store,
+            long transactionNumber,
+            int posCode);
 
         string BuildSuspendedBasketReceipt(Basket? basket, bool withArticles);
     }
