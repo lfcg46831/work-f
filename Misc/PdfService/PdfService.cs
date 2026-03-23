@@ -1846,11 +1846,12 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
 
             EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight * 2f);
-            DrawSimpleSeparator(canvas, page, currentY);
 
             var total = totalManual + totalAutomatic;
             EnsureWithdrawalPageSpace(pdfDoc, font, ref pageIndex, ref page, ref canvas, ref currentY, minY, resetY, lineHeight);
             WriteText(canvas, font, 40, currentY, 9, $"TOTAL: {Strings.Format(total, "F2")}");
+            currentY -= lineHeight;
+            DrawSimpleSeparator(canvas, page, currentY);
 
             return currentY - lineHeight;
         }
