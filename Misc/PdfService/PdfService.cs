@@ -9,6 +9,7 @@ using iText.Kernel.Pdf.Canvas;
 using iText.Kernel.Pdf.Xobject;
 using iText.Layout;
 using iText.Layout.Element;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualBasic;
@@ -20,6 +21,7 @@ using TotalCheckoutPOS.Services.POS.Api.Domain.Helpers;
 using TotalCheckoutPOS.Services.POS.Api.Domain.Models;
 using TotalCheckoutPOS.Services.POS.Api.Domain.Models.Article;
 using TotalCheckoutPOS.Services.POS.Api.Domain.Models.Receipts;
+using TotalCheckoutPOS.Services.POS.Api.Domain.Utilities;
 
 namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 {
@@ -319,13 +321,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             return Convert.ToBase64String(ms.ToArray());
         }
 
-        public string BuildReceiptWithdrawal(
-            Stores store,
+        public ReceiptResponse BuildReceiptWithdrawal(
+            Stores? store,
             Operators? operatorLogged,
             long transactionNumber,
-            int storeCode,
             int posCode,
-            int operatorCode,
             WithdrawalReceipt withdrawalReceipt,
             EndOfShift endOfShift,
             bool withdrawalAbandoned,
@@ -350,9 +350,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 store,
                 operatorLogged,
                 transactionNumber,
-                storeCode,
                 posCode,
-                operatorCode,
                 withdrawalReceipt,
                 endOfShift,
                 withdrawalAbandoned,
@@ -365,10 +363,9 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 font,
                 boldFont,
                 store,
+                operatorLogged,
                 transactionNumber,
-                storeCode,
                 posCode,
-                operatorCode,
                 withdrawalReceipt,
                 endOfShift,
                 withdrawalAbandoned,
@@ -379,7 +376,15 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             pdfDoc.Close();
 
-            return Convert.ToBase64String(ms.ToArray());
+            var receipt = Convert.ToBase64String(ms.ToArray());
+
+            var result = new ReceiptResponse()
+            {
+                ReceiptContent = receipt,
+                ReceiptContentType = "application/pdf"
+            };
+
+            return result;
         }
 
         private void DrawLogotype(PdfCanvas canvas)
@@ -1433,12 +1438,10 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             PdfDocument pdfDoc,
             PdfFont font,
             PdfFont boldFont,
-            Stores store,
+            Stores? store,
             Operators? operatorLogged,
             long transactionNumber,
-            int storeCode,
             int posCode,
-            int operatorCode,
             WithdrawalReceipt withdrawalReceipt,
             EndOfShift endOfShift,
             bool withdrawalAbandoned,
@@ -1452,7 +1455,9 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             const float lineHeight = 12f;
             float currentY = 800f;
             var storeName = store?.Name?.Trim() ?? string.Empty;
+            var storeCode = store?.Code ?? 0;
             var operatorName = operatorLogged?.Name ?? string.Empty;
+            var operatorCode = operatorLogged?.Code ?? 0;
             var total = CalculateWithdrawalTotal(withdrawalReceipt);
             var checkDigit = BuildWithdrawalCheckDigit(withdrawalReceipt, storeCode, total, appendCheckDigit: false);
 
@@ -1485,6 +1490,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             currentY -= lineHeight * 1.2f;
 
             currentY = WriteWithdrawalSummaryLines(
+                page,
                 canvas,
                 font,
                 currentY,
@@ -1493,7 +1499,6 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 endOfShift,
                 automaticWithdrawal);
 
-            DrawSimpleSeparator(canvas, page, currentY);
             currentY -= lineHeight;
 
             WriteText(canvas, font, 40, currentY, 9, $"CHECK DIGIT: {checkDigit}");
@@ -1515,11 +1520,10 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             PdfDocument pdfDoc,
             PdfFont font,
             PdfFont boldFont,
-            Stores store,
+            Stores? store,
+            Operators? operatorLogged,
             long transactionNumber,
-            int storeCode,
             int posCode,
-            int operatorCode,
             WithdrawalReceipt withdrawalReceipt,
             EndOfShift endOfShift,
             bool withdrawalAbandoned,
@@ -1534,6 +1538,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             const float lineHeight = 12f;
             float currentY = 800f;
             var storeName = store?.Name?.Trim() ?? string.Empty;
+            var storeCode = store?.Code ?? 0;
+            var operatorCode = operatorLogged?.Code ?? 0;
             var total = CalculateWithdrawalTotal(withdrawalReceipt);
             var barcode = BuildWithdrawalCheckDigit(withdrawalReceipt, storeCode, total, appendCheckDigit: true);
             var checkDigit = barcode[^2..];
@@ -1561,7 +1567,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             }
 
             DrawBarcode(canvas, pdfDoc, barcode, 170, currentY - 28, 250, 32);
-            currentY -= lineHeight * 4f;
+            currentY -= lineHeight * 8f;
 
             WriteTextCentered(canvas, font, currentY, $"SAFEBAG: {withdrawalReceipt.SafeBag}", 9);
             currentY -= lineHeight;
@@ -1663,6 +1669,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         }
 
         private float WriteWithdrawalSummaryLines(
+            PdfPage page,
             PdfCanvas canvas,
             PdfFont font,
             float currentY,
@@ -1712,6 +1719,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                     totalAutomatic += paymentTypeTotal;
                 }
             }
+
+            DrawSimpleSeparator(canvas, page, currentY);
 
             var total = totalManual + totalAutomatic;
             WriteText(canvas, font, 40, currentY, 9, $"TOTAL: {Strings.Format(total, "F2")}");
@@ -1860,13 +1869,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
         ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate);
 
-        string BuildReceiptWithdrawal(
-            Stores store,
+        ReceiptResponse BuildReceiptWithdrawal(
+            Stores? store,
             Operators? operatorLogged,
             long transactionNumber,
-            int storeCode,
             int posCode,
-            int operatorCode,
             WithdrawalReceipt withdrawalReceipt,
             EndOfShift endOfShift,
             bool withdrawalAbandoned,
