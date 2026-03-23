@@ -319,6 +319,69 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             return Convert.ToBase64String(ms.ToArray());
         }
 
+        public string BuildReceiptWithdrawal(
+            Stores store,
+            Operators? operatorLogged,
+            long transactionNumber,
+            int storeCode,
+            int posCode,
+            int operatorCode,
+            WithdrawalReceipt withdrawalReceipt,
+            EndOfShift endOfShift,
+            bool withdrawalAbandoned,
+            List<BoxControl>? previousBoxControl,
+            List<BasketPayment>? automaticWithdrawal,
+            List<Tenders> tenders)
+        {
+            using var ms = new MemoryStream();
+            using var writer = new PdfWriter(ms);
+            using var pdfDoc = new PdfDocument(writer);
+
+            PdfFont font = PdfFontFactory.CreateFont(StandardFonts.COURIER);
+            PdfFont boldFont = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
+
+            var safePreviousBoxControl = previousBoxControl ?? [];
+            var safeAutomaticWithdrawal = automaticWithdrawal ?? [];
+
+            DrawWithdrawalDrawerReceiptPage(
+                pdfDoc,
+                font,
+                boldFont,
+                store,
+                operatorLogged,
+                transactionNumber,
+                storeCode,
+                posCode,
+                operatorCode,
+                withdrawalReceipt,
+                endOfShift,
+                withdrawalAbandoned,
+                safeAutomaticWithdrawal,
+                tenders,
+                1);
+
+            DrawWithdrawalEsegurReceiptPage(
+                pdfDoc,
+                font,
+                boldFont,
+                store,
+                transactionNumber,
+                storeCode,
+                posCode,
+                operatorCode,
+                withdrawalReceipt,
+                endOfShift,
+                withdrawalAbandoned,
+                safePreviousBoxControl,
+                safeAutomaticWithdrawal,
+                tenders,
+                2);
+
+            pdfDoc.Close();
+
+            return Convert.ToBase64String(ms.ToArray());
+        }
+
         private void DrawLogotype(PdfCanvas canvas)
         {
             string path = "";
@@ -1366,6 +1429,428 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             WriteText(canvas, font, 50, 37, 6, obs);
         }
 
+        private void DrawWithdrawalDrawerReceiptPage(
+            PdfDocument pdfDoc,
+            PdfFont font,
+            PdfFont boldFont,
+            Stores store,
+            Operators? operatorLogged,
+            long transactionNumber,
+            int storeCode,
+            int posCode,
+            int operatorCode,
+            WithdrawalReceipt withdrawalReceipt,
+            EndOfShift endOfShift,
+            bool withdrawalAbandoned,
+            List<BasketPayment> automaticWithdrawal,
+            List<Tenders> tenders,
+            int pageIndex)
+        {
+            var page = pdfDoc.AddNewPage(PageSize.A4);
+            var canvas = new PdfCanvas(page);
+
+            const float lineHeight = 12f;
+            float currentY = 800f;
+            var storeName = store?.Name?.Trim() ?? string.Empty;
+            var operatorName = operatorLogged?.Name ?? string.Empty;
+            var total = CalculateWithdrawalTotal(withdrawalReceipt);
+            var checkDigit = BuildWithdrawalCheckDigit(withdrawalReceipt, storeCode, total, appendCheckDigit: false);
+
+            DrawPageNumber(canvas, font, 565, 20, pageIndex, 8);
+
+            WriteTextCentered(canvas, boldFont, currentY, storeName, 10);
+            currentY -= lineHeight * 1.5f;
+
+            if (withdrawalAbandoned)
+            {
+                WriteTextCentered(canvas, boldFont, currentY, "** ABANDONO **", 10);
+                currentY -= lineHeight * 1.5f;
+            }
+
+            WriteText(canvas, font, 40, currentY, 9, $"{storeCode:D4} {operatorName}");
+            currentY -= lineHeight;
+            WriteText(canvas, font, 40, currentY, 9, "Ref sangria: Loc Data  Hora");
+            currentY -= lineHeight;
+            WriteText(canvas, font, 40, currentY, 9, $"{storeCode:D4} {DateTime.Now:yyyy/MM/dd} {DateTime.Now:HH:mm:ss}");
+            currentY -= lineHeight;
+            WriteText(canvas, font, 40, currentY, 9, $"Cód Sangria: {withdrawalReceipt.SafeBag}");
+            currentY -= lineHeight;
+            WriteText(canvas, font, 40, currentY, 9, $"{storeCode:D4} {DateTime.Now:yyyy/MM/dd}");
+            currentY -= lineHeight;
+
+            DrawSimpleSeparator(canvas, page, currentY);
+            currentY -= lineHeight;
+
+            WriteTextCentered(canvas, boldFont, currentY, "TOTAL DE SANGRIAS", 9);
+            currentY -= lineHeight * 1.2f;
+
+            currentY = WriteWithdrawalSummaryLines(
+                canvas,
+                font,
+                currentY,
+                tenders,
+                withdrawalReceipt,
+                endOfShift,
+                automaticWithdrawal);
+
+            DrawSimpleSeparator(canvas, page, currentY);
+            currentY -= lineHeight;
+
+            WriteText(canvas, font, 40, currentY, 9, $"CHECK DIGIT: {checkDigit}");
+            currentY -= lineHeight * 1.5f;
+            WriteText(canvas, font, 40, currentY, 9, "Operador:");
+            currentY -= lineHeight * 2f;
+            WriteText(canvas, font, 40, currentY, 9, "Supervisor:");
+            currentY -= lineHeight * 2f;
+            WriteText(
+                canvas,
+                font,
+                40,
+                currentY,
+                8,
+                $"{transactionNumber:D6} {DateTime.Now:yyyy-MM-dd HH:mm} {operatorCode:D4} {posCode:D4} {storeCode:D4}");
+        }
+
+        private void DrawWithdrawalEsegurReceiptPage(
+            PdfDocument pdfDoc,
+            PdfFont font,
+            PdfFont boldFont,
+            Stores store,
+            long transactionNumber,
+            int storeCode,
+            int posCode,
+            int operatorCode,
+            WithdrawalReceipt withdrawalReceipt,
+            EndOfShift endOfShift,
+            bool withdrawalAbandoned,
+            List<BoxControl> previousBoxControl,
+            List<BasketPayment> automaticWithdrawal,
+            List<Tenders> tenders,
+            int pageIndex)
+        {
+            var page = pdfDoc.AddNewPage(PageSize.A4);
+            var canvas = new PdfCanvas(page);
+
+            const float lineHeight = 12f;
+            float currentY = 800f;
+            var storeName = store?.Name?.Trim() ?? string.Empty;
+            var total = CalculateWithdrawalTotal(withdrawalReceipt);
+            var barcode = BuildWithdrawalCheckDigit(withdrawalReceipt, storeCode, total, appendCheckDigit: true);
+            var checkDigit = barcode[^2..];
+
+            DrawPageNumber(canvas, font, 565, 20, pageIndex, 8);
+
+            WriteTextCentered(canvas, boldFont, currentY, storeName, 10);
+            currentY -= lineHeight * 1.5f;
+            WriteTextCentered(canvas, boldFont, currentY, "Sangria Externa", 10);
+            currentY -= lineHeight;
+            WriteTextCentered(canvas, boldFont, currentY, "ESEGUR", 10);
+            currentY -= lineHeight * 1.5f;
+
+            if (withdrawalAbandoned)
+            {
+                WriteTextCentered(canvas, boldFont, currentY, "** ABANDONO **", 10);
+                currentY -= lineHeight * 1.5f;
+            }
+
+            var withdrawalType = withdrawalReceipt.Type == 0 ? string.Empty : withdrawalReceipt.Type.GetEnumDescription();
+            if (!string.IsNullOrWhiteSpace(withdrawalType))
+            {
+                WriteTextCentered(canvas, font, currentY, withdrawalType, 9);
+                currentY -= lineHeight;
+            }
+
+            DrawBarcode(canvas, pdfDoc, barcode, 170, currentY - 28, 250, 32);
+            currentY -= lineHeight * 4f;
+
+            WriteTextCentered(canvas, font, currentY, $"SAFEBAG: {withdrawalReceipt.SafeBag}", 9);
+            currentY -= lineHeight;
+            WriteTextCentered(canvas, font, currentY, $"{storeCode:D4} {DateTime.Now:yyyy-MM-dd}", 9);
+            currentY -= lineHeight;
+
+            if (withdrawalAbandoned)
+            {
+                WriteTextCentered(canvas, boldFont, currentY, "Abandono da Sangria", 9);
+                currentY -= lineHeight;
+            }
+
+            DrawSimpleSeparator(canvas, page, currentY);
+            currentY -= lineHeight;
+            WriteTextCentered(canvas, boldFont, currentY, "SANGRIAS AUTOMÁTICAS", 9);
+            currentY -= lineHeight * 1.2f;
+
+            currentY = WriteAutomaticWithdrawalLines(canvas, font, currentY, automaticWithdrawal, tenders, previousBoxControl.Any());
+
+            DrawSimpleSeparator(canvas, page, currentY);
+            currentY -= lineHeight;
+            WriteTextCentered(canvas, boldFont, currentY, "SANGRIAS MANUAIS", 9);
+            currentY -= lineHeight * 1.2f;
+
+            if (withdrawalReceipt.WithrawalSequence != null && withdrawalReceipt.WithrawalSequence.Any())
+            {
+                currentY = WriteManualWithdrawalLines(canvas, font, currentY, withdrawalReceipt, tenders, endOfShift);
+                DrawSimpleSeparator(canvas, page, currentY);
+                currentY -= lineHeight;
+            }
+
+            if (previousBoxControl.Any())
+            {
+                WriteTextCentered(canvas, boldFont, currentY, "Histórico de Sangrias do Turno", 9);
+                currentY -= lineHeight * 1.2f;
+                currentY = WritePreviousWithdrawalLines(canvas, font, currentY, previousBoxControl);
+                DrawSimpleSeparator(canvas, page, currentY);
+                currentY -= lineHeight;
+            }
+
+            WriteTextCentered(canvas, boldFont, currentY, "TOTAL DE SANGRIAS", 9);
+            currentY -= lineHeight * 1.2f;
+
+            if (previousBoxControl.Any())
+            {
+                currentY = WriteAutomaticWithdrawalLines(canvas, font, currentY, automaticWithdrawal, tenders, true);
+            }
+
+            if (withdrawalReceipt.WithrawalSequence != null && withdrawalReceipt.WithrawalSequence.Any())
+            {
+                currentY = WriteManualWithdrawalLines(canvas, font, currentY, withdrawalReceipt, tenders, endOfShift);
+                DrawSimpleSeparator(canvas, page, currentY);
+                currentY -= lineHeight;
+            }
+
+            var totalToDisplay = total;
+            if (endOfShift.IsDrawerFundAdded && endOfShift.EndOfShiftActive)
+            {
+                totalToDisplay += Convert.ToDecimal(endOfShift.DrawerFund) + automaticWithdrawal.Sum(sequence => sequence.Amount);
+            }
+
+            WriteText(canvas, boldFont, 40, currentY, 9, $"TOTAL: {totalToDisplay:F2}");
+            currentY -= lineHeight;
+            WriteText(canvas, font, 40, currentY, 9, $"CHECK DIGIT: {checkDigit}");
+            currentY -= lineHeight * 1.5f;
+            WriteText(canvas, font, 40, currentY, 9, "Operador:");
+            currentY -= lineHeight * 2f;
+            WriteText(canvas, font, 40, currentY, 9, "Supervisor:");
+            currentY -= lineHeight * 2f;
+            WriteText(
+                canvas,
+                font,
+                40,
+                currentY,
+                8,
+                $"{transactionNumber:D6} {DateTime.Now:yyyy-MM-dd HH:mm} {operatorCode:D4} {posCode:D4} {storeCode:D4}");
+        }
+
+        private static void DrawSimpleSeparator(PdfCanvas canvas, PdfPage page, float y)
+        {
+            canvas.SaveState()
+                .MoveTo(40, y)
+                .LineTo(page.GetPageSize().GetWidth() - 40, y)
+                .Stroke()
+                .RestoreState();
+        }
+
+        private static void DrawBarcode(PdfCanvas canvas, PdfDocument pdfDoc, string code, float x, float y, float width, float height)
+        {
+            var barcode = new Barcode128(pdfDoc);
+            barcode.SetCodeType(Barcode128.CODE128);
+            barcode.SetCode(code);
+            barcode.SetFont(null);
+
+            var xObject = barcode.CreateFormXObject(ColorConstants.BLACK, ColorConstants.BLACK, pdfDoc);
+            var rect = new Rectangle(x, y, width, height);
+            canvas.AddXObjectFittedIntoRectangle(xObject, rect);
+            WriteTextCentered(canvas, PdfFontFactory.CreateFont(StandardFonts.COURIER), y - 10, code, 8);
+        }
+
+        private float WriteWithdrawalSummaryLines(
+            PdfCanvas canvas,
+            PdfFont font,
+            float currentY,
+            List<Tenders> tenders,
+            WithdrawalReceipt withdrawalReceipt,
+            EndOfShift endOfShift,
+            List<BasketPayment> automaticWithdrawal)
+        {
+            const float lineHeight = 12f;
+            decimal totalManual = 0;
+            decimal totalAutomatic = 0;
+
+            if (withdrawalReceipt.WithrawalSequence != null && withdrawalReceipt.WithrawalSequence.Any())
+            {
+                foreach (var withrawalSequence in withdrawalReceipt.WithrawalSequence)
+                {
+                    totalManual += decimal.Round(withrawalSequence.Totality, 2);
+
+                    var payment = tenders.FirstOrDefault(x => x.Code == (int)withrawalSequence.Type);
+                    var paymentName = payment?.Name?.ToUpper() ?? string.Empty;
+
+                    WriteText(canvas, font, 40, currentY, 9, paymentName);
+                    WriteTextRightAligned(canvas, font, 300, currentY, 9, Strings.Format(withrawalSequence.CashType, "F2"));
+                    WriteTextRightAligned(canvas, font, 390, currentY, 9, Strings.Format((int)withrawalSequence.CashQuantity));
+                    WriteTextRightAligned(canvas, font, 520, currentY, 9, Strings.Format(withrawalSequence.Totality, "F2"));
+                    currentY -= lineHeight;
+                }
+            }
+
+            if (endOfShift.EndOfShiftActive && automaticWithdrawal.Any())
+            {
+                foreach (var groupedWithdrawal in automaticWithdrawal.GroupBy(item => item.PaymentType))
+                {
+                    decimal paymentTypeTotal = 0;
+
+                    foreach (var withdrawal in groupedWithdrawal)
+                    {
+                        paymentTypeTotal += (decimal)withdrawal.TotalToPay;
+                    }
+
+                    var payment = tenders.FirstOrDefault(x => x.Code == (int)groupedWithdrawal.Key);
+                    var paymentName = payment?.Name?.ToUpper() ?? string.Empty;
+
+                    WriteText(canvas, font, 40, currentY, 9, paymentName);
+                    WriteTextRightAligned(canvas, font, 520, currentY, 9, Strings.Format(paymentTypeTotal, "F2"));
+                    currentY -= lineHeight;
+                    totalAutomatic += paymentTypeTotal;
+                }
+            }
+
+            var total = totalManual + totalAutomatic;
+            WriteText(canvas, font, 40, currentY, 9, $"TOTAL: {Strings.Format(total, "F2")}");
+
+            return currentY - lineHeight;
+        }
+
+        private float WriteAutomaticWithdrawalLines(
+            PdfCanvas canvas,
+            PdfFont font,
+            float currentY,
+            List<BasketPayment> automaticWithdrawal,
+            List<Tenders> tenders,
+            bool includeBreakdown)
+        {
+            const float lineHeight = 12f;
+
+            if (!includeBreakdown || automaticWithdrawal == null || automaticWithdrawal.Count == 0)
+            {
+                WriteText(canvas, font, 40, currentY, 9, "TOTAL: 0.00");
+                return currentY - lineHeight;
+            }
+
+            decimal total = 0;
+            var groupedWithdrawals = automaticWithdrawal
+                .Where(item => item.PaymentType != (int)BasketPaymentType.Cash)
+                .GroupBy(item => item.PaymentType);
+
+            foreach (var groupedWithdrawal in groupedWithdrawals)
+            {
+                decimal paymentTypeTotal = 0;
+
+                foreach (var withdrawal in groupedWithdrawal)
+                {
+                    paymentTypeTotal += withdrawal.TotalToPay;
+                }
+
+                var payment = tenders.FirstOrDefault(x => x.Code == (int)groupedWithdrawal.Key);
+                var paymentName = payment?.Name?.ToUpper() ?? string.Empty;
+
+                WriteText(canvas, font, 40, currentY, 9, paymentName);
+                WriteTextRightAligned(canvas, font, 300, currentY, 9, Strings.Format(paymentTypeTotal, "F2"));
+                WriteTextRightAligned(canvas, font, 390, currentY, 9, "1");
+                WriteTextRightAligned(canvas, font, 520, currentY, 9, Strings.Format(paymentTypeTotal, "F2"));
+                currentY -= lineHeight;
+                total += paymentTypeTotal;
+            }
+
+            WriteText(canvas, font, 40, currentY, 9, $"TOTAL: {Strings.Format(total, "F2")}");
+            return currentY - lineHeight;
+        }
+
+        private float WriteManualWithdrawalLines(
+            PdfCanvas canvas,
+            PdfFont font,
+            float currentY,
+            WithdrawalReceipt withdrawalReceipt,
+            List<Tenders> tenders,
+            EndOfShift endOfShift)
+        {
+            const float lineHeight = 12f;
+            decimal total = 0;
+
+            if (withdrawalReceipt.WithrawalSequence != null)
+            {
+                foreach (var withrawalSequence in withdrawalReceipt.WithrawalSequence)
+                {
+                    total += decimal.Round(withrawalSequence.Totality, 2);
+
+                    var payment = tenders.FirstOrDefault(x => x.Code == (int)withrawalSequence.Type);
+                    var paymentName = payment?.Name?.ToUpper() ?? string.Empty;
+
+                    WriteText(canvas, font, 40, currentY, 9, paymentName);
+                    WriteTextRightAligned(canvas, font, 300, currentY, 9, Strings.Format(withrawalSequence.CashType, "F2"));
+                    WriteTextRightAligned(canvas, font, 390, currentY, 9, Strings.Format(withrawalSequence.CashQuantity, "F2"));
+                    WriteTextRightAligned(canvas, font, 520, currentY, 9, Strings.Format(withrawalSequence.Totality, "F2"));
+                    currentY -= lineHeight;
+                }
+            }
+
+            if (endOfShift.IsDrawerFundAdded && endOfShift.EndOfShiftActive)
+            {
+                WriteText(canvas, font, 40, currentY, 9, $"FUNDO DE CAIXA {Strings.Format(endOfShift.DrawerFund, "F2")}");
+                currentY -= lineHeight;
+                total += Convert.ToDecimal(endOfShift.DrawerFund);
+            }
+
+            WriteText(canvas, font, 40, currentY, 9, $"TOTAL: {Strings.Format(total, "F2")}");
+            return currentY - lineHeight;
+        }
+
+        private static float WritePreviousWithdrawalLines(
+            PdfCanvas canvas,
+            PdfFont font,
+            float currentY,
+            List<BoxControl> previousBoxControl)
+        {
+            const float lineHeight = 12f;
+
+            foreach (var boxControl in previousBoxControl)
+            {
+                WriteText(canvas, font, 40, currentY, 9, boxControl.SafebagNumber);
+                WriteTextRightAligned(canvas, font, 520, currentY, 9, Strings.Format(boxControl.SangriaAmount, "F2"));
+                currentY -= lineHeight;
+            }
+
+            return currentY;
+        }
+
+        private static decimal CalculateWithdrawalTotal(WithdrawalReceipt withdrawalReceipt)
+        {
+            if (withdrawalReceipt.WithrawalSequence == null || !withdrawalReceipt.WithrawalSequence.Any())
+                return 0;
+
+            return withdrawalReceipt.WithrawalSequence.Sum(sequence => sequence.Totality);
+        }
+
+        private static string BuildWithdrawalCheckDigit(WithdrawalReceipt withdrawalReceipt, int storeCode, decimal total, bool appendCheckDigit)
+        {
+            int totalAsInt = Math.Abs((int)(total * 100));
+            string formattedTotal = totalAsInt.ToString("0000000");
+            var barcode = withdrawalReceipt.SafeBag + storeCode.ToString("D4") + DateTime.Now.ToString("MMdd") + formattedTotal;
+            var checkDigit = ReturnTwoDigitsCheckDigit(barcode);
+
+            return appendCheckDigit ? barcode + checkDigit : checkDigit;
+        }
+
+        private static string ReturnTwoDigitsCheckDigit(string barcode)
+        {
+            short sum = 0;
+
+            for (int i = 0; i < barcode.Length; i++)
+            {
+                sum += (short)(int.Parse(barcode.Substring(i, 1)) * (i + 1));
+            }
+
+            return (sum % 99).ToString("D2");
+        }
+
         #endregion
     }
 
@@ -1374,6 +1859,20 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         string BuildCustomReceipt(Stores store, string customReceiptBase64);
 
         ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate);
+
+        string BuildReceiptWithdrawal(
+            Stores store,
+            Operators? operatorLogged,
+            long transactionNumber,
+            int storeCode,
+            int posCode,
+            int operatorCode,
+            WithdrawalReceipt withdrawalReceipt,
+            EndOfShift endOfShift,
+            bool withdrawalAbandoned,
+            List<BoxControl>? previousBoxControl,
+            List<BasketPayment>? automaticWithdrawal,
+            List<Tenders> tenders);
 
         string BuildSuspendedBasketReceipt(Basket? basket, bool withArticles);
     }
