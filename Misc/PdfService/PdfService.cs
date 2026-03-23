@@ -87,8 +87,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             const float lineHeight = 8f;
             const float fontSize = 7f;
-            const float firstPageHeaderY = 655f;
-            const float otherPagesStartY = 800f;
+            const float firstPageHeaderY = 700f;
+            const float otherPagesStartY = 755f;
             const float minY = 50f;
 
             var pageIndex = 1;
@@ -259,7 +259,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 IsMerchantReceipt = false,
                 ReceiptContent = receipt,
                 ReceiptContentType = "application/pdf",
-                ReceiptType = hasRecoveryReceipt ? TransactionReceiptType.RecoveryReceipt : TransactionReceiptType.NormalReceipt
+                ReceiptType = hasRecoveryReceipt && !isSecondWay ? TransactionReceiptType.RecoveryReceipt : TransactionReceiptType.NormalReceipt
             };
 
             return result;
