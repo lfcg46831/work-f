@@ -9,7 +9,6 @@ using iText.Kernel.Pdf.Canvas;
 using iText.Kernel.Pdf.Xobject;
 using iText.Layout;
 using iText.Layout.Element;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualBasic;
@@ -2155,7 +2154,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             currentY -= lineHeight * 2f;
 
             DrawBarcode(canvas, pdfDoc, barcode, 170, currentY - 28, 250, 32);
-            currentY -= lineHeight * 4f;
+            currentY -= lineHeight * 8f;
 
             WriteText(
                 canvas,
