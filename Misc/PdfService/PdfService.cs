@@ -32,8 +32,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         IStructureService structureService,
         IVatReasonsService vatReasonsService,
         IReceiptPrintPolicy receiptPrintPolicy,
-        IVatService vatService,
-        ITenderService tenderService) : IPdfService
+        IVatService vatService) : IPdfService
     {
         private sealed class FooterBlock
         {
@@ -70,7 +69,6 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         private readonly IVatReasonsService _vatReasonsService = vatReasonsService;
         private readonly IReceiptPrintPolicy _receiptPrintPolicy = receiptPrintPolicy;
         private readonly IVatService _vatService = vatService;
-        private readonly ITenderService _tenderService = tenderService;
 
         #region Public methods
 
@@ -323,7 +321,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             return Convert.ToBase64String(ms.ToArray());
         }
 
-        public ReceiptResponse BuildReceiptBoxControl(List<BoxControl> boxControl, int operatorCode, long transactionNumber)
+        public ReceiptResponse BuildReceiptBoxControl(List<BoxControl> boxControl, int operatorCode, long transactionNumber, IList<Tenders> tenders)
         {
             using var ms = new MemoryStream();
             using var writer = new PdfWriter(ms);
@@ -341,6 +339,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 boxControl,
                 operatorCode,
                 transactionNumber,
+                tenders,
                 ref pageIndex);
 
             pdfDoc.Close();
@@ -1572,6 +1571,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             List<BoxControl> boxControl,
             int operatorCode,
             long transactionNumber,
+            IList<Tenders> tenders,
             ref int pageIndex)
         {
             const float lineHeight = 12f;
@@ -1583,7 +1583,6 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             var totalStoreCode = _configuration.GetValue<int>("TotalStoreCode");
             var totalPosCode = _configuration.GetValue<int>("TotalPosCode");
-            var tenders = _tenderService.GetTenders();
 
             currentY = WriteBoxControlHeader(canvas, boldFont, page, currentY, lineHeight, false);
 
@@ -2652,7 +2651,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
         ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate);
 
-        ReceiptResponse BuildReceiptBoxControl(List<BoxControl> boxControl, int operatorCode, long transactionNumber);
+        ReceiptResponse BuildReceiptBoxControl(List<BoxControl> boxControl, int operatorCode, long transactionNumber, IList<Tenders> tenders);
 
         ReceiptResponse BuildReceiptWithdrawal(
             Stores? store,
