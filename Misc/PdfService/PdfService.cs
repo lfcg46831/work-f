@@ -382,6 +382,35 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             };
         }
 
+        public ReceiptResponse BuildReceiptPaymentTransfer(long transactionNumber, TransferPayment transferPayment, Operators? operatorLogged)
+        {
+            using var ms = new MemoryStream();
+            using var writer = new PdfWriter(ms);
+            using var pdfDoc = new PdfDocument(writer);
+
+            PdfFont font = PdfFontFactory.CreateFont(StandardFonts.COURIER);
+            PdfFont boldFont = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
+
+            var pageIndex = 1;
+
+            DrawReceiptPaymentTransferPage(
+                pdfDoc,
+                font,
+                boldFont,
+                transactionNumber,
+                transferPayment,
+                operatorLogged,
+                ref pageIndex);
+
+            pdfDoc.Close();
+
+            return new ReceiptResponse()
+            {
+                ReceiptContent = Convert.ToBase64String(ms.ToArray()),
+                ReceiptContentType = "application/pdf"
+            };
+        }
+
         public ReceiptResponse BuildReceiptWithdrawal(
             Stores? store,
             Operators? operatorLogged,
@@ -1729,6 +1758,51 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             WriteText(canvas, boldFont, 40, currentY, 9, $"TOTAL: {Strings.Format(total, "F2")}");
         }
 
+        private void DrawReceiptPaymentTransferPage(
+            PdfDocument pdfDoc,
+            PdfFont font,
+            PdfFont boldFont,
+            long transactionNumber,
+            TransferPayment transferPayment,
+            Operators? operatorLogged,
+            ref int pageIndex)
+        {
+            const float lineHeight = 12f;
+            const float resetY = 740f;
+
+            AddWithdrawalPage(pdfDoc, font, ref pageIndex, out var canvas);
+            float currentY = resetY;
+
+            var originTenderName = ((BasketPaymentType)transferPayment.OriginTenderCode).GetEnumDescription();
+            var destinTenderName = ((BasketPaymentType)transferPayment.DestinTenderCode).GetEnumDescription();
+
+            var totalStoreCode = _configuration.GetValue<int>("TotalStoreCode");
+            var totalPosCode = _configuration.GetValue<int>("TotalPosCode");
+            var operatorCode = operatorLogged?.Code ?? 0;
+            var transactionNumberString = transactionNumber.ToString("D6");
+            var currentTimestampDisplay = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+
+            WriteTextCentered(canvas, boldFont, currentY, "** Transferência **", 10);
+            currentY -= lineHeight * 2f;
+
+            WriteTextCentered(canvas, font, currentY, "Origem", 9);
+            currentY -= lineHeight;
+            WriteTextCentered(canvas, font, currentY, $"{originTenderName}    {Strings.Format(transferPayment.OriginTenderValue, "F2")}", 9);
+            currentY -= lineHeight * 1.5f;
+
+            WriteTextCentered(canvas, font, currentY, "Destino", 9);
+            currentY -= lineHeight;
+            WriteTextCentered(canvas, font, currentY, $"{destinTenderName}    {Strings.Format(transferPayment.DestinTenderValue, "F2")}", 9);
+            currentY -= lineHeight * 1.5f;
+
+            WriteTextCentered(
+                canvas,
+                font,
+                currentY,
+                $"{transactionNumberString} {currentTimestampDisplay} {operatorCode:D4} {totalPosCode:D4} {totalStoreCode:D4}",
+                9);
+        }
+
         private void DrawWithdrawalDrawerReceiptPage(
             PdfDocument pdfDoc,
             PdfFont font,
@@ -2745,6 +2819,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         ReceiptResponse BuildReceiptBoxControl(List<BoxControl> boxControl, int operatorCode, long transactionNumber, IList<Tenders> tenders);
 
         ReceiptResponse BuildReceiptChangeRequest(Stores? store, long posCode, long transactionNumber, int operatorCode, List<MoneyChangeRequestLift>? lifts);
+
+        ReceiptResponse BuildReceiptPaymentTransfer(long transactionNumber, TransferPayment transferPayment, Operators? operatorLogged);
 
         ReceiptResponse BuildReceiptWithdrawal(
             Stores? store,
