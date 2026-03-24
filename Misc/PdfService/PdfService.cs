@@ -351,6 +351,37 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             };
         }
 
+        public ReceiptResponse BuildReceiptChangeRequest(Stores? store, long posCode, long transactionNumber, int operatorCode, List<MoneyChangeRequestLift>? lifts)
+        {
+            using var ms = new MemoryStream();
+            using var writer = new PdfWriter(ms);
+            using var pdfDoc = new PdfDocument(writer);
+
+            PdfFont font = PdfFontFactory.CreateFont(StandardFonts.COURIER);
+            PdfFont boldFont = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
+
+            var pageIndex = 1;
+
+            DrawReceiptChangeRequestPage(
+                pdfDoc,
+                font,
+                boldFont,
+                store,
+                posCode,
+                transactionNumber,
+                operatorCode,
+                lifts ?? [],
+                ref pageIndex);
+
+            pdfDoc.Close();
+
+            return new ReceiptResponse()
+            {
+                ReceiptContent = Convert.ToBase64String(ms.ToArray()),
+                ReceiptContentType = "application/pdf"
+            };
+        }
+
         public ReceiptResponse BuildReceiptWithdrawal(
             Stores? store,
             Operators? operatorLogged,
@@ -1638,6 +1669,66 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             return currentY - lineHeight;
         }
 
+        private void DrawReceiptChangeRequestPage(
+            PdfDocument pdfDoc,
+            PdfFont font,
+            PdfFont boldFont,
+            Stores? store,
+            long posCode,
+            long transactionNumber,
+            int operatorCode,
+            List<MoneyChangeRequestLift> lifts,
+            ref int pageIndex)
+        {
+            const float lineHeight = 12f;
+            const float resetY = 740f;
+
+            var page = AddWithdrawalPage(pdfDoc, font, ref pageIndex, out var canvas);
+            float currentY = resetY;
+
+            var storeName = store?.Name?.Trim() ?? string.Empty;
+            var storeCode = store?.Code ?? 0;
+
+            decimal total = 0.0M;
+            foreach (var withrawalSequence in lifts)
+            {
+                if (withrawalSequence.Quantity > 0)
+                    total += (decimal)(withrawalSequence.Quantity * withrawalSequence.Denomination);
+            }
+
+            var currentTimestampCompact = DateTime.Now.ToString("yyyyMMddHHmm");
+            var currentTimestampDisplay = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+            var transactionNumberString = transactionNumber.ToString("D6");
+
+            WriteTextCentered(canvas, boldFont, currentY, "PEDIDO DE TROCO", 10);
+            currentY -= lineHeight * 1.5f;
+            if (!string.IsNullOrWhiteSpace(storeName))
+            {
+                WriteTextCentered(canvas, font, currentY, storeName, 9);
+                currentY -= lineHeight;
+            }
+            WriteTextCentered(canvas, font, currentY, $"{storeCode} {currentTimestampCompact}", 9);
+            currentY -= lineHeight * 1.5f;
+
+            WriteText(canvas, font, 40, currentY, 9, "Operador:");
+            currentY -= lineHeight * 2f;
+            WriteText(canvas, font, 40, currentY, 9, "Supervisor:");
+            currentY -= lineHeight * 2f;
+            WriteText(
+                canvas,
+                font,
+                40,
+                currentY,
+                8,
+                $"{transactionNumberString} {currentTimestampDisplay} {operatorCode:D4} {posCode:D4} {storeCode:D4}");
+            currentY -= lineHeight * 1.5f;
+
+            DrawSimpleSeparator(canvas, page, currentY);
+            currentY -= lineHeight * 1.5f;
+
+            WriteText(canvas, boldFont, 40, currentY, 9, $"TOTAL: {Strings.Format(total, "F2")}");
+        }
+
         private void DrawWithdrawalDrawerReceiptPage(
             PdfDocument pdfDoc,
             PdfFont font,
@@ -2652,6 +2743,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate);
 
         ReceiptResponse BuildReceiptBoxControl(List<BoxControl> boxControl, int operatorCode, long transactionNumber, IList<Tenders> tenders);
+
+        ReceiptResponse BuildReceiptChangeRequest(Stores? store, long posCode, long transactionNumber, int operatorCode, List<MoneyChangeRequestLift>? lifts);
 
         ReceiptResponse BuildReceiptWithdrawal(
             Stores? store,
