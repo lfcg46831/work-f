@@ -7,9 +7,11 @@ using iText.Kernel.Font;
 using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas;
+using iText.Kernel.Pdf.Extgstate;
 using iText.Kernel.Pdf.Xobject;
 using iText.Layout;
 using iText.Layout.Element;
+using iText.Layout.Properties;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualBasic;
@@ -215,7 +217,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             };
         }
 
-        public ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate)
+        public ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate, bool isCanceled = false)
         {
             var templatePath = _configuration.GetValue<string>("InvoiceTemplatePath");
 
@@ -309,6 +311,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             else
             {
                 hasRecoveryReceipt = AddPaymentInformation(store, basket.PaymentLines, merchantReceipts);
+            }
+
+            if (isCanceled)
+            {
+                DrawCanceledWatermarkOnAllPages(pdfDoc, boldFont);
             }
 
             pdfDoc.Close();
@@ -639,6 +646,37 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         #endregion
 
         #region Private methods
+
+        private static void DrawCanceledWatermarkOnAllPages(PdfDocument pdfDoc, PdfFont watermarkFont)
+        {
+            const string watermarkText = "ANULADO";
+            const float watermarkFontSize = 180f;
+            const float watermarkOpacity = 0.17f;
+
+            for (int pageNumber = 1; pageNumber <= pdfDoc.GetNumberOfPages(); pageNumber++)
+            {
+                var page = pdfDoc.GetPage(pageNumber);
+                var pageSize = page.GetPageSize();
+                var rotationAngle = (float)Math.Atan2(pageSize.GetHeight(), pageSize.GetWidth());
+
+                var canvas = new PdfCanvas(page.NewContentStreamAfter(), page.GetResources(), pdfDoc);
+                canvas.SaveState();
+                canvas.SetExtGState(new PdfExtGState().SetFillOpacity(watermarkOpacity));
+
+                var textCanvas = new Canvas(canvas, pageSize);
+                textCanvas.ShowTextAligned(
+                    new Paragraph(watermarkText).SetFont(watermarkFont).SetFontSize(watermarkFontSize).SetFontColor(ColorConstants.GRAY),
+                    pageSize.GetLeft() + 20f,
+                    pageSize.GetBottom() + 20f,
+                    pageNumber,
+                    TextAlignment.LEFT,
+                    VerticalAlignment.BOTTOM,
+                    rotationAngle);
+                textCanvas.Close();
+
+                canvas.RestoreState();
+            }
+        }
 
         private void DrawSafebagAnullmentReceiptPage(
             PdfDocument pdfDoc,
@@ -3100,7 +3138,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
     {
         string BuildCustomReceipt(Stores store, string customReceiptBase64);
 
-        ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate);
+        ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate, bool isCanceled = false);
 
         ReceiptResponse BuildReceiptBoxControl(List<BoxControl> boxControl, int operatorCode, long transactionNumber, IList<Tenders> tenders);
 
