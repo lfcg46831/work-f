@@ -177,6 +177,44 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             };
         }
 
+        public ReceiptResponse BuildSafebagAnullmentReceipt(
+            Stores? store,
+            Operators? operatorLogged,
+            IList<Tenders> tenders,
+            List<ExtraordinaryRevenueLiftEvent> lifts,
+            long transactionNumber,
+            string safebagNumber)
+        {
+            using var ms = new MemoryStream();
+            using var writer = new PdfWriter(ms);
+            using var pdfDoc = new PdfDocument(writer);
+
+            PdfFont font = PdfFontFactory.CreateFont(StandardFonts.COURIER);
+            PdfFont boldFont = PdfFontFactory.CreateFont(StandardFonts.COURIER_BOLD);
+
+            var pageIndex = 1;
+
+            DrawSafebagAnullmentExtraordinaryRevenueReceiptPage(
+                pdfDoc,
+                font,
+                boldFont,
+                store,
+                operatorLogged,
+                tenders,
+                lifts ?? [],
+                transactionNumber,
+                safebagNumber,
+                ref pageIndex);
+
+            pdfDoc.Close();
+
+            return new ReceiptResponse()
+            {
+                ReceiptContent = Convert.ToBase64String(ms.ToArray()),
+                ReceiptContentType = "application/pdf"
+            };
+        }
+
         public ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate)
         {
             var templatePath = _configuration.GetValue<string>("InvoiceTemplatePath");
@@ -707,6 +745,111 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 $"{transactionNumber:D6} {DateTime.Now:yyyy-MM-dd HH:mm} {operatorCode:D4} {posCode:D4} {storeCode:D4}");
         }
 
+        private void DrawSafebagAnullmentExtraordinaryRevenueReceiptPage(
+            PdfDocument pdfDoc,
+            PdfFont font,
+            PdfFont boldFont,
+            Stores? store,
+            Operators? operatorLogged,
+            IList<Tenders> tenders,
+            List<ExtraordinaryRevenueLiftEvent> lifts,
+            long transactionNumber,
+            string safebagNumber,
+            ref int pageIndex)
+        {
+            const float lineHeight = 12f;
+            const float minY = 60f;
+            const float resetY = 740f;
+
+            var page = AddWithdrawalPage(pdfDoc, font, ref pageIndex, out var canvas);
+            float currentY = resetY;
+
+            var storeName = store?.Name?.Trim() ?? string.Empty;
+            var storeCode = store?.Code ?? 0;
+            var operatorCode = operatorLogged?.Code ?? 0;
+            var operatorName = operatorLogged?.Name ?? string.Empty;
+            var posCode = _configuration.GetValue<int>("TotalPosCode");
+
+            if (!string.IsNullOrWhiteSpace(storeName))
+            {
+                WriteTextCentered(canvas, boldFont, currentY, storeName, 10);
+                currentY -= lineHeight * 1.5f;
+            }
+
+            WriteTextCentered(canvas, boldFont, currentY, "ANULAÇÃO", 10);
+            currentY -= lineHeight * 1.5f;
+
+            WriteText(canvas, font, 40, currentY, 9, $"{operatorCode:D4} {operatorName}");
+            currentY -= lineHeight;
+
+            WriteText(canvas, font, 40, currentY, 9, "Receitas Extraordinárias");
+            currentY -= lineHeight;
+
+            WriteText(canvas, font, 40, currentY, 9, $"SAFEBAG: {safebagNumber}");
+            currentY -= lineHeight;
+
+            WriteTextCentered(canvas, font, currentY, $"{storeCode:D4} {DateTime.Now:yyyy-MM-dd}", 9);
+            currentY -= lineHeight;
+
+            DrawSimpleSeparator(canvas, page, currentY);
+            currentY -= lineHeight;
+
+            foreach (var lift in lifts)
+            {
+                if (EnsureWithdrawalPageSpace(
+                    pdfDoc,
+                    font,
+                    ref pageIndex,
+                    ref page,
+                    ref canvas,
+                    ref currentY,
+                    minY,
+                    resetY,
+                    lineHeight))
+                {
+                    WriteTextCentered(canvas, boldFont, currentY, "ANULAÇÃO (cont.)", 10);
+                    currentY -= lineHeight * 1.5f;
+                }
+
+                var payment = tenders?.FirstOrDefault(x => x.Code == (int)lift.TenderCode);
+                var paymentName = payment?.Name?.ToUpper() ?? lift.TenderCode.ToString();
+
+                WriteText(canvas, font, 40, currentY, 9, paymentName);
+                WriteTextRightAligned(canvas, font, 380, currentY, 9, $"-{lift.LiftQuantity}");
+                WriteTextRightAligned(canvas, font, 520, currentY, 9, Strings.Format(lift.LiftValue, "F2"));
+
+                currentY -= lineHeight;
+            }
+
+            EnsureWithdrawalPageSpace(
+                pdfDoc,
+                font,
+                ref pageIndex,
+                ref page,
+                ref canvas,
+                ref currentY,
+                minY,
+                resetY,
+                lineHeight * 6f);
+
+            DrawSimpleSeparator(canvas, page, currentY);
+            currentY -= lineHeight * 1.5f;
+
+            WriteText(canvas, font, 40, currentY, 9, "Operador:");
+            currentY -= lineHeight * 2f;
+
+            WriteText(canvas, font, 40, currentY, 9, "Supervisor:");
+            currentY -= lineHeight * 2f;
+
+            WriteText(
+                canvas,
+                font,
+                40,
+                currentY,
+                8,
+                $"{transactionNumber:D6} {DateTime.Now:yyyy-MM-dd HH:mm} {operatorCode:D4} {posCode:D4} {storeCode:D4}");
+        }
+
         private void DrawLogotype(PdfCanvas canvas)
         {
             string path = "";
@@ -837,8 +980,6 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 }
             }
 
-            DrawCarriedForward(canvas, font, runningTotal);
-
             return runningTotal;
         }
 
@@ -905,9 +1046,10 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
         {
             var hasCreditPayment = basket.PaymentLines?.Any(line => line.IsCredit) == true;
             var isSimpleInvoice = basket.CustomerFiscalInformation == null || basket.CustomerFiscalInformation.IsSimpleInvoice;
+            var hasCurrentAccountPayment = basket.PaymentLines?.Where(p => p.TypePaymentCondition == (int)TypePaymentCondition.CurrentAccount).Sum(y => y.Amount) > 0;
 
-            var docName = basket.CustomerFiscalInformation.ToDocumentName(isReturn, hasCreditPayment);
-            var docType = basket.CustomerFiscalInformation.ToDocumentType(isReturn, hasCreditPayment);
+            var docName = basket.CustomerFiscalInformation.ToDocumentName(isReturn, hasCreditPayment, hasCurrentAccountPayment);
+            var docType = basket.CustomerFiscalInformation.ToDocumentType(isReturn, hasCreditPayment, hasCurrentAccountPayment);
             var docNumber = basket.BasketSerie.Serie + "/" + basket.BasketSerie.Sequence;
             var docDate = basket.TransactionOcurredAt?.ToString("yyyy-MM-dd");
             var invoiceNumber = $"{docType} {docNumber}";
@@ -2997,6 +3139,14 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             Operators? operatorLogged,
             IList<Tenders> tenders,
             List<LiftTransactionDetail> lifts,
+            long transactionNumber,
+            string safebagNumber);
+
+        ReceiptResponse BuildSafebagAnullmentReceipt(
+            Stores? store,
+            Operators? operatorLogged,
+            IList<Tenders> tenders,
+            List<ExtraordinaryRevenueLiftEvent> lifts,
             long transactionNumber,
             string safebagNumber);
 
