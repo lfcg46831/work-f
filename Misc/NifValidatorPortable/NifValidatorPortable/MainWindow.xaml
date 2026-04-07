@@ -1,0 +1,260 @@
+<Window x:Class="NifValidatorPortable.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="NIF Validator Portable"
+        Width="1200"
+        Height="760"
+        MinWidth="960"
+        MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        Background="#F7F1E8">
+    <Window.Resources>
+        <SolidColorBrush x:Key="InkBrush" Color="#143339" />
+        <SolidColorBrush x:Key="MutedBrush" Color="#5E7677" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#007977" />
+        <SolidColorBrush x:Key="AccentSoftBrush" Color="#DFF3EF" />
+        <SolidColorBrush x:Key="SuccessBrush" Color="#176B57" />
+        <SolidColorBrush x:Key="SuccessSoftBrush" Color="#DDF3EA" />
+        <SolidColorBrush x:Key="WarningBrush" Color="#A44B21" />
+        <SolidColorBrush x:Key="WarningSoftBrush" Color="#FDE7D8" />
+
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="28" />
+            <Setter Property="Padding" Value="28" />
+            <Setter Property="Background" Value="#FFFDFC" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="26" ShadowDepth="0" Color="#16000000" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="16,12" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="16">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            <Setter Property="Background" Value="#ECE6DE" />
+        </Style>
+    </Window.Resources>
+
+    <Grid x:Name="RootGrid" Opacity="0">
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#F9F3EA" Offset="0" />
+                <GradientStop Color="#EEF7F4" Offset="0.58" />
+                <GradientStop Color="#F7EBDD" Offset="1" />
+            </LinearGradientBrush>
+        </Grid.Background>
+
+        <Canvas IsHitTestVisible="False">
+            <Ellipse Width="320" Height="320" Fill="#26D6EEE7" Canvas.Left="-80" Canvas.Top="-50" />
+            <Ellipse Width="240" Height="240" Fill="#20F3C6A7" Canvas.Right="-40" Canvas.Top="90" />
+        </Canvas>
+
+        <Grid Margin="34">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.96*" />
+                <ColumnDefinition Width="1.14*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Margin="0,0,20,0" Padding="32" CornerRadius="34" Background="#F8EFE3">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel>
+                        <Border Padding="12,7" CornerRadius="14" Background="#DDF3EA" HorizontalAlignment="Left">
+                            <TextBlock Text="Offline, leve e pronto para testes" Foreground="{StaticResource SuccessBrush}" FontSize="12" FontWeight="SemiBold" />
+                        </Border>
+                        <TextBlock Margin="0,20,0,0" FontFamily="Bahnschrift" FontSize="48" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" Text="NIF Studio" />
+                        <TextBlock Margin="0,14,0,0" FontSize="18" LineHeight="28" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}"
+                                   Text="Valida NIF português e identificadores fiscais estrangeiros numa só interface, com normalização, classificação e feedback detalhado." />
+                    </StackPanel>
+
+                    <WrapPanel Grid.Row="1" Margin="0,24,0,0">
+                        <Border Margin="0,0,10,10" Padding="12,8" CornerRadius="14" Background="#FFFDFC">
+                            <TextBlock Text="PT: prefixo + dígito de controlo" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+                        </Border>
+                        <Border Margin="0,0,10,10" Padding="12,8" CornerRadius="14" Background="#FFFDFC">
+                            <TextBlock Text="Estrangeiro: codigo do pais" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+                        </Border>
+                        <Border Margin="0,0,10,10" Padding="12,8" CornerRadius="14" Background="#FFFDFC">
+                            <TextBlock Text="Com ou sem prefixo na entrada" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+                        </Border>
+                    </WrapPanel>
+
+                    <Border Grid.Row="2" Style="{StaticResource CardStyle}" Background="#FFF8F2" Padding="24" Margin="0,18,0,0" VerticalAlignment="Center">
+                        <StackPanel>
+                            <TextBlock Text="Como usar" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                            <TextBlock Margin="0,14,0,0" TextWrapping="Wrap" FontSize="15" Foreground="{StaticResource MutedBrush}"
+                                       Text="1. Cola o valor tal como o recebeste: 123456789, PT123456789, ESB99286320." />
+                            <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" FontSize="15" Foreground="{StaticResource MutedBrush}"
+                                       Text="2. Se o valor estrangeiro vier sem prefixo, escolhe o país na lista." />
+                            <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" FontSize="15" Foreground="{StaticResource MutedBrush}"
+                                       Text="3. A aplicação mostra o valor normalizado e as verificações executadas." />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="3" Margin="0,22,0,0" Padding="18" CornerRadius="20" Background="#1A133238">
+                        <TextBlock TextWrapping="Wrap" Foreground="{StaticResource InkBrush}" FontSize="13" FontWeight="SemiBold"
+                                   Text="A validação PT é algorítmica. A estrangeira é estrutural/offline; validação oficial exige VIES ou a autoridade fiscal do país." />
+                    </Border>
+                </Grid>
+            </Border>
+
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,20">
+                        <StackPanel>
+                            <TextBlock Text="Testar Identificador" FontFamily="Bahnschrift" FontSize="30" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                            <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" FontSize="15"
+                                       Text="Se o valor já começar por PT/ES/DE/etc, o prefixo é detetado automaticamente." />
+
+                            <Grid Margin="0,24,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="220" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Text="NIF / Tax ID" />
+                                    <Grid>
+                                        <Border CornerRadius="18" Background="#F4F0EB">
+                                            <TextBox x:Name="TaxIdTextBox"
+                                                     Padding="18,15"
+                                                     FontSize="22"
+                                                     FontFamily="Bahnschrift"
+                                                     BorderThickness="0"
+                                                     Background="Transparent"
+                                                     Foreground="{StaticResource InkBrush}"
+                                                     TextChanged="TaxIdTextBox_OnTextChanged"
+                                                     KeyDown="TaxIdTextBox_OnKeyDown" />
+                                        </Border>
+                                        <TextBlock x:Name="PlaceholderTextBlock"
+                                                   Margin="18,0,0,0"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="#8090A19F"
+                                                   FontSize="18"
+                                                   IsHitTestVisible="False"
+                                                   Text="Ex.: 123456789, PT123456789, ESB99286320" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Text="País se vier sem prefixo" />
+                                    <Border CornerRadius="18" Background="#F4F0EB">
+                                        <ComboBox x:Name="CountryComboBox"
+                                                  Padding="14,10"
+                                                  Background="Transparent"
+                                                  BorderThickness="0"
+                                                  FontSize="15"
+                                                  Foreground="{StaticResource InkBrush}"
+                                                  ItemsSource="{Binding CountryOptions}"
+                                                  DisplayMemberPath="DisplayText"
+                                                  SelectedValuePath="Code"
+                                                  SelectedIndex="0" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+
+                            <WrapPanel Margin="0,22,0,0">
+                                <Button x:Name="ValidateButton" Style="{StaticResource PrimaryButtonStyle}" Width="170" Content="Validar agora" Click="ValidateButton_OnClick" />
+                                <Button Style="{StaticResource SecondaryButtonStyle}" Width="120" Margin="12,0,0,0" Content="Limpar" Click="ClearButton_OnClick" />
+                                <Button x:Name="CopyButton" Style="{StaticResource SecondaryButtonStyle}" Width="175" Margin="12,0,0,0" Content="Copiar normalizado" Click="CopyButton_OnClick" IsEnabled="False" />
+                            </WrapPanel>
+
+                            <WrapPanel Margin="0,24,0,0">
+                                <Button Style="{StaticResource SecondaryButtonStyle}" Width="110" Margin="0,0,10,10" Click="ExampleButton_OnClick" Tag="123456789|">PT válido</Button>
+                                <Button Style="{StaticResource SecondaryButtonStyle}" Width="110" Margin="0,0,10,10" Click="ExampleButton_OnClick" Tag="245716843|">PT inválido</Button>
+                                <Button Style="{StaticResource SecondaryButtonStyle}" Width="130" Margin="0,0,10,10" Click="ExampleButton_OnClick" Tag="ESB99286320|">ES com prefixo</Button>
+                                <Button Style="{StaticResource SecondaryButtonStyle}" Width="130" Margin="0,0,10,10" Click="ExampleButton_OnClick" Tag="DE123456789|">DE com prefixo</Button>
+                                <Button Style="{StaticResource SecondaryButtonStyle}" Width="130" Margin="0,0,10,10" Click="ExampleButton_OnClick" Tag="123456789|DE">DE sem prefixo</Button>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="ResultCard" Style="{StaticResource CardStyle}" RenderTransformOrigin="0.5,0.5">
+                        <Border.RenderTransform>
+                            <ScaleTransform x:Name="ResultScaleTransform" ScaleX="1" ScaleY="1" />
+                        </Border.RenderTransform>
+
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border x:Name="StatusBadge" Padding="12,8" CornerRadius="14" Background="{StaticResource AccentSoftBrush}">
+                                    <TextBlock x:Name="StatusBadgeText" Text="À espera" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                                </Border>
+                                <TextBlock x:Name="HeadlineText" Margin="14,0,0,0" FontSize="28" FontFamily="Bahnschrift" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" Text="Insere um valor para validar" />
+                            </StackPanel>
+
+                            <TextBlock x:Name="SummaryText" Margin="0,14,0,0" FontSize="15" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}"
+                                       Text="A resposta vai aparecer aqui com o resultado principal e as verificações aplicadas." />
+
+                            <Border x:Name="MessageBorder" Margin="0,22,0,0" Padding="16" CornerRadius="18" Background="{StaticResource AccentSoftBrush}">
+                                <TextBlock x:Name="MessageText" Foreground="{StaticResource InkBrush}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" Text="Sem resultado ainda." />
+                            </Border>
+
+                            <UniformGrid Margin="0,24,0,0" Rows="2" Columns="2">
+                                <Border Margin="0,0,14,14" Padding="16" CornerRadius="20" Background="#F6F2ED">
+                                    <StackPanel>
+                                        <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Text="Normalizado" />
+                                        <TextBlock x:Name="NormalizedText" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" Text="-" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Margin="0,0,0,14" Padding="16" CornerRadius="20" Background="#F6F2ED">
+                                    <StackPanel>
+                                        <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Text="País aplicado" />
+                                        <TextBlock x:Name="CountryText" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" Text="-" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Margin="0,0,14,0" Padding="16" CornerRadius="20" Background="#F6F2ED">
+                                    <StackPanel>
+                                        <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Text="Tipo / classificação" />
+                                        <TextBlock x:Name="TypeText" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" Text="-" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Margin="0,0,0,0" Padding="16" CornerRadius="20" Background="#F6F2ED">
+                                    <StackPanel>
+                                        <TextBlock Foreground="{StaticResource MutedBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Text="Modo de validação" />
+                                        <TextBlock x:Name="ModeText" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" Text="-" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+
+                            <TextBlock Margin="0,24,0,0" Text="Verificações executadas" FontSize="19" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                            <ItemsControl x:Name="ChecksItemsControl" Margin="0,14,0,0" ItemsSource="{Binding ResultChecks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,10" Padding="14,12" CornerRadius="16" Background="#FBF8F4">
+                                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{StaticResource InkBrush}" FontSize="14" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Window>
