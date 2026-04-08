@@ -217,7 +217,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             };
         }
 
-        public ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate, bool isCanceled = false)
+        public ReceiptResponse BuildReceipt(
+            Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate, bool isCanceled)
         {
             var templatePath = _configuration.GetValue<string>("InvoiceTemplatePath");
 
@@ -666,7 +667,7 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
                 var textCanvas = new Canvas(canvas, pageSize);
                 textCanvas.ShowTextAligned(
                     new Paragraph(watermarkText).SetFont(watermarkFont).SetFontSize(watermarkFontSize).SetFontColor(ColorConstants.GRAY),
-                    pageSize.GetLeft() + 20f,
+                    pageSize.GetLeft() + 150f,
                     pageSize.GetBottom() + 20f,
                     pageNumber,
                     TextAlignment.LEFT,
@@ -1087,10 +1088,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             var hasCurrentAccountPayment = basket.PaymentLines?.Where(p => p.TypePaymentCondition == (int)TypePaymentCondition.CurrentAccount).Sum(y => y.Amount) > 0;
 
             var docName = basket.CustomerFiscalInformation.ToDocumentName(isReturn, hasCreditPayment, hasCurrentAccountPayment);
-            var docType = basket.CustomerFiscalInformation.ToDocumentType(isReturn, hasCreditPayment, hasCurrentAccountPayment);
-            var docNumber = basket.BasketSerie.Serie + "/" + basket.BasketSerie.Sequence;
             var docDate = basket.TransactionOcurredAt?.ToString("yyyy-MM-dd");
-            var invoiceNumber = $"{docType} {docNumber}";
+            var invoiceNumber = basket.BasketSerie.ToSaftDocumentNumber();
 
             var payerName = basket.CustomerFiscalInformation?.Name;
             var payerAddress = basket.CustomerFiscalInformation?.Address;
@@ -1124,11 +1123,11 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
 
             if (isSecondWay)
             {
-                WriteTextRightAligned(canvas, boldFont, 550, 769, 7, isDuplicate ? "2ª Via Original" : "2ª Via Duplicado");
+                WriteTextRightAligned(canvas, boldFont, 550, 769, 7, isDuplicate ? "2ª Via Duplicado" : "2ª Via Original");
             }
             else
             {
-                WriteTextRightAligned(canvas, boldFont, 550, 769, 7, isDuplicate ? "Original" : "Duplicado");
+                WriteTextRightAligned(canvas, boldFont, 550, 769, 7, isDuplicate ? "Duplicado" : "Original");
             }
 
             WriteText(canvas, font, 324, 749, 8, docName);
@@ -1136,10 +1135,13 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             WriteText(canvas, font, 324, 734, 8, docDate);
             WriteText(canvas, font, 420, 734, 8, invoiceNumber);
 
-            WriteText(canvas, font, 310, 700, 8, payerName);
-            WriteText(canvas, font, 310, 690, 8, payerAddress);
-            WriteText(canvas, font, 310, 680, 8, payerPostalCode);
-            WriteText(canvas, font, 310, 670, 8, payerCity);
+            if (!isSimpleInvoice)
+            {
+                WriteText(canvas, font, 310, 700, 8, payerName);
+                WriteText(canvas, font, 310, 690, 8, payerAddress);
+                WriteText(canvas, font, 310, 680, 8, payerPostalCode);
+                WriteText(canvas, font, 310, 670, 8, payerCity);
+            }
 
             WriteText(canvas, font, 24, 665, 8, storeName);
             WriteText(canvas, font, 45, 655, 8, storeAddress);
@@ -1149,16 +1151,16 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
             WriteText(canvas, font, 22, 585, 7, "Oper : " + operatorInternalCode);
 
             WriteText(canvas, font, 210, 598, 7, charge);
-            WriteMultilineText(canvas, font, 210, 587, 7, discharge);
+            WriteMultilineText(canvas, font, 210, 587, 7, isSimpleInvoice ? "MORADA DO CLIENTE" : discharge);
             WriteText(canvas, font, 394, 596, 7, chargingDate);
             WriteText(canvas, font, 394, 585, 7, deliveryDate);
             WriteText(canvas, font, 454, 596, 7, chargingTime);
-            WriteText(canvas, font, 486, 596, 7, $"{payerCountry} {nif}");
+            WriteText(canvas, font, 486, 596, 7, string.IsNullOrWhiteSpace(nif) ? "Consumidor Final" : $"{payerCountry} {nif}");
 
             if (pageIndex == 1 && !string.IsNullOrWhiteSpace(atcudBarcode))
             {
                 WriteText(canvas, font, 22, 520, 7, "ATCUD:" + atcud);
-                WriteText(canvas, font, 22, 512, 7, hashCode + "-Processado por programa certificado " + certificationCode + "/AT");
+                WriteText(canvas, font, 22, 512, 7, hashCode + "-Processado por programa certificado n." + certificationCode + "/AT");
 
                 if (isReturn)
                 {
@@ -3138,7 +3140,8 @@ namespace TotalCheckoutPOS.Services.POS.Api.Comunication.Services
     {
         string BuildCustomReceipt(Stores store, string customReceiptBase64);
 
-        ReceiptResponse BuildReceipt(Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate, bool isCanceled = false);
+        ReceiptResponse BuildReceipt(
+            Stores store, Operators op, Basket basket, List<ReceiptResponse> merchantReceipts, bool isReturn, bool isSecondWay, bool isDuplicate, bool isCanceled);
 
         ReceiptResponse BuildReceiptBoxControl(List<BoxControl> boxControl, int operatorCode, long transactionNumber, IList<Tenders> tenders);
 
